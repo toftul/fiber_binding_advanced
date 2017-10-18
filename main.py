@@ -7,7 +7,7 @@ Main project file
 import numpy as np
 #import scipy
 #from scipy.integrate import ode, quad
-#from scipy import interpolate
+#from scipy import interpolate 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 #import progressbar
@@ -257,7 +257,7 @@ def P11NN(wl):
 def Gszz(rho, rho_prime, dz, wl):
     HH = sp.hankel1(n_mode, krho1_wg(wl)*rho) * \
          sp.hankel1(n_mode, krho1_wg(wl)*rho_prime)
-    G = -0.5 * P11NN(wl) * krho1_wg(wl)**2 / (k1_wg(wl)**2) * \
+    G = - 0.5 * P11NN(wl) * krho1_wg(wl)**2 / (k1_wg(wl)**2) * \
         HH * np.exp(1j * kz_wg(wl) * np.abs(dz))
     return(G)
 
