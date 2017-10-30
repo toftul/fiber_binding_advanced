@@ -1,5 +1,4 @@
 import numpy as np
-import const
 
 
 # Dimentionless Green func

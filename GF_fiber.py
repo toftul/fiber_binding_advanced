@@ -19,13 +19,64 @@ def cart2pol(x, y):
     return(rho, phi)
 
 
+# contour parametrization
+def zzz(t, direction, area, im_max, re_max, phi):
+    z = 0.0
+
+    """
+    AREAS:
+
+                   | Im kz
+             *     |
+         (2) * *   |(3)
+             *   * |            (5)       Re kz
+    **********-----*-----**************-----
+      (1)          | *   *
+                   |   * * (4)
+                   |     *
+                   |
+    """
+
+    # forward
+    if direction == 1:
+        if area == 3:
+            z = t * np.exp(1j * phi)
+        elif area == 4:
+            z = 1j * t + re_max
+        elif area == 5:
+            z = t
+    # backward
+    elif direction == -1:
+        if area == 3:
+            z = t * np.exp(1j * phi)
+        elif area == 2:
+            z = 1j * t - re_max
+        elif area == 1:
+            z = t
+
+    # both
+    elif direction == 0:
+        if area == 3:
+            z = t * np.exp(1j * phi)
+        elif area == 2:
+            z = 1j * t - re_max
+        elif area == 1:
+            z = t
+        elif area == 4:
+            z = 1j * t + re_max
+        elif area == 5:
+            z = t
+
+    return(z)
+
+
 def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     """Fiber Green's function integrand
         Calculates the integrand of the scattered part of the Green's tensor of the fiber;
 
     Parameters
     ----------
-        x : float
+        x : complex
             k_z, integration variable
         k : float
             k-vector value, 2pi/\lambda_0 = \omega/c;
@@ -71,7 +122,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
 
     Det = rc**2 * (k2**2 * DJnb / (b * Jnb) - k1**2 * DHna / (a * Hna)) * \
           (DJnb / (b * Jnb) - DHna / (a * Hna)) - \
-          (n**2) * (x**2) * ((1 / b**2 - 1 / a**2)**2)
+          (n**2) * (x**2) * ((1/b**2 - 1/a**2)**2)
     # y = ( ( (k2^2*DJn(n,b*rc))./(b.*besselj(n,b*rc)) - (k1^2*DHn(n,a*rc))./...
     #     (a.*besselh(n,a*rc)) ).*( (DJn(n,b*rc))./(b.*besselj(n,b*rc)) - (DHn(n,a*rc))./...
     #     (a.*besselh(n,a*rc)) ) )*rc^2 - n^2*(k1^2-a.^2).*(( b.^(-2) - a.^(-2) ).^2);
@@ -83,8 +134,8 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     Rn11mn = k1 * n * rc * x * Jna / a / Hna /Det * (1/a**2 - 1/b**2) * (DJna / Jna - DHna / Hna)
     Rn11nm = k1 * n * rc * x * Jna / a /Hna /Det * (1/a**2 - 1/b**2 ) * (DJna / Jna - DHna / Hna)
     Rn11nn = Jna / Hna * ((1/b**2 - 1/a**2)**2 * n**2 * x**2 -
-             (DJnb / (Jnb * b) - DHna / (Hna * a)) * 
-             (DJnb * k2**2 / (Jnb * b) - DJna * k1**2 / (Jna * a)) * rc**2) / \
+             (DJnb / (Jnb * b) - DHna / (Hna * a)) *
+              (DJnb * k2**2 / (Jnb * b) - DJna * k1**2 / (Jna * a)) * rc**2) / \
              ( -(1/b**2 - 1/a**2)**2 * n**2 * x**2 + (DJnb / (Jnb * b) - 
              DHna / (Hna * a)) * (DJnb * k2**2 / (Jnb * b) - DHna * k1**2 / (Hna * a)) * rc**2)
 
@@ -177,6 +228,12 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     return iG
 
 
+def KOSTYL(t, direction, area, im_max, re_max, theta,
+           k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
+    return(iGNSFF11(zzz(t, direction, area, im_max, re_max, theta),
+                    k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
+
+
 def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
              i, j, tol, kzimax, direction):
     """Fiber Green's function
@@ -226,61 +283,69 @@ def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     r2, p2 = cart2pol(r2_vec[0], r2_vec[1])
     z2 = r2_vec[2]
 
-    k2 = np.sqrt(eps_in + 0j) * k
+    k2 = np.sqrt(eps_in + 0j).real * k
     dkz = - k * 1e-8
 
-    kzReMax = kzimax * np.real(np.sqrt(eps_in + 0j))
+    kzReMax = kzimax * np.sqrt(eps_in + 0j).real
     kzImMax = k * 1e-4  # choose this quantity to be smaller for 
-    # larger interatomic distances dz, since exp(1i k_z delta_z) 
+                        # larger interatomic distances dz, since exp(1i k_z delta_z) 
 
-    # these two tolerances are for the quadgk/integral function
-    retol = 1e-9
-    abtol = 1e-11
 
-    # all modes, both directions
-    c_both_start_all = - kzReMax - 1j * dkz
-    c_both_end_all = - c_both_start_all
-    c_both_all = np.array([-1.1 * k2 - 1j * dkz,
-                           -1.1 * k2 + 1j * kzImMax,
-                           1.1 * k2 - 1j * kzImMax,
-                           1.1 * k2 + 1j * dkz])
+    """
+    AREAS:
 
-    # all modes, forward directions
-    c_forw_start_all = 0j
-    c_forw_end_all = kzReMax + 1j * dkz
-    c_forw_all = np.array([1.1 * k2 - 1j * kzImMax,
-                           1.1 * k2 + 1j * dkz])
-
-    # all modes, backward directions
-    c_backw_start_all = - c_forw_end_all
-    c_backw_end_all = - c_forw_start_all
-    c_backw_all = np.array([-1.1 * k2 - 1j * dkz,
-                            -1.1 * k2 + 1j * kzImMax])
+                   | Im kz
+             *     |
+         (2) * *   |(3)
+             *   * |            (5)       Re kz
+    **********-----*-----**************-----
+      (1)          | *   *
+                   |   * * (4)
+                   |     *
+                   |
+    """
 
     GNS11mat = 0.  # Green's tensor component
     nmodes = 0.  # number of considered 'n' modes
     Gnprev = 0.  # previous, it sums from nmin to nmax-1; when nmax = 0 Gnprev = 0;
 
+    theta = - np.arctan(kzImMax / (1.1 * k2))
     MaxIntervalCount = 100000
     for num in range(nmin, nmax + 1):
         # REGULAR CASE: ANY STRUCTURE, ALL MODES
-        # INTEGRATION IS NOT YET DONE!!!
         if direction == 0:
-            GNS11mat += complex_quad(iGNSFF11, args=(k, eps_out, eps_in, rc,
-                                     num, r1, r2, p1, p2, z1, z2, i, j),
-                                     c_both_start_all, c_both_end_all,
+            # area = 1
+            GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2,
+                                     args=(direction, 1, kzImMax, 1.1 * k2, k, theta,
+                                           eps_out, eps_in, rc, num, r1, r2,
+                                           p1, p2, z1, z2, i, j),
                                      limit=MaxIntervalCount)
-            #GNS11mat = GNS11mat + quadgk(@(x)iGNSFF11(k,eps_out, eps_in, rc, num,x,r1,r2,p1,p2,z1,z2,i,j),...
-            #           c_both_start_all,c_both_end_all,'RelTol',retol,'AbsTol',abtol,'Waypoints',...
-            #           c_both_all,'MaxIntervalCount',100000000); 
-        elif direction == 1:
-            #GNS11mat = GNS11mat + quadgk(@(x)iGNSFF11(k,eps_out, eps_in, rc, num,x,r1,r2,p1,p2,z1,z2,i,j),...
-            #           c_forw_start_all,c_forw_end_all,'RelTol',retol,'AbsTol',abtol,'Waypoints',...
-            #           c_forw_all,'MaxIntervalCount',100000000);
-        elif direction == -1:
-            #GNS11mat = GNS11mat + quadgk(@(x)iGNSFF11(k,eps_out, eps_in, rc, num,x,r1,r2,p1,p2,z1,z2,i,j),...
-            #           c_backw_start_all,c_backw_end_all,'RelTol',retol,'AbsTol',abtol,'Waypoints',...
-            #           c_backw_all,'MaxIntervalCount',100000000); 
+            # area = 2
+            GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax,
+                                     args=(direction, 2, kzImMax, 1.1 * k2, k, theta,
+                                           eps_out, eps_in, rc, num, r1, r2,
+                                           p1, p2, z1, z2, i, j),
+                                     limit=MaxIntervalCount)
+            # area = 3
+            GNS11mat += np.exp(1j * theta) \
+                    * complex_quad(KOSTYL, - np.sqrt(kzImMax**2 + (1.1 * k2)**2),
+                                             np.sqrt(kzImMax**2 + (1.1 * k2)**2),
+                                     args=(direction, 3, kzImMax, 1.1 * k2, k, theta,
+                                           eps_out, eps_in, rc, num, r1, r2,
+                                           p1, p2, z1, z2, i, j),
+                                     limit=MaxIntervalCount)
+            # area = 4
+            GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0,
+                                     args=(direction, 4, kzImMax, 1.1 * k2, k, theta,
+                                           eps_out, eps_in, rc, num, r1, r2,
+                                           p1, p2, z1, z2, i, j),
+                                     limit=MaxIntervalCount)
+            # area = 5
+            GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax,
+                                     args=(direction, 5, kzImMax, 1.1 * k2, k, theta,
+                                           eps_out, eps_in, rc, num, r1, r2,
+                                           p1, p2, z1, z2, i, j),
+                                     limit=MaxIntervalCount)
         else:
             GNS11mat = 0.
             print('GF_fiber ERROR: direction != -1, 0, 1')
