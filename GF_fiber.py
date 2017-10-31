@@ -3,71 +3,21 @@ import scipy.special as sp
 from scipy.integrate import quad
 
 
-def complex_quad(func, a, b, args=(), limit=50, points=None):
-    def RE(x, args=()):
-        return func(x, args).real
+def complex_quad(func, a, b, limit=50, *args):
+    def RE(x):
+        return func(x, *args).real
 
-    def IM(x, args=()):
-        return func(x, args).imag
+    def IM(x):
+        return func(x, *args).imag
 
-    return(quad(RE, a, b, args, limit, points)[0] + 1j * quad(IM, a, b, args, limit, points)[0])
+    return(quad(RE, a, b, limit=limit)[0] + 
+           1j * quad(IM, a, b, limit=limit)[0])
 
 
 def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return(rho, phi)
-
-
-# contour parametrization
-def zzz(t, direction, area, im_max, re_max, phi):
-    z = 0.0
-
-    """
-    AREAS:
-
-                   | Im kz
-             *     |
-         (2) * *   |(3)
-             *   * |            (5)       Re kz
-    **********-----*-----**************-----
-      (1)          | *   *
-                   |   * * (4)
-                   |     *
-                   |
-    """
-
-    # forward
-    if direction == 1:
-        if area == 3:
-            z = t * np.exp(1j * phi)
-        elif area == 4:
-            z = 1j * t + re_max
-        elif area == 5:
-            z = t
-    # backward
-    elif direction == -1:
-        if area == 3:
-            z = t * np.exp(1j * phi)
-        elif area == 2:
-            z = 1j * t - re_max
-        elif area == 1:
-            z = t
-
-    # both
-    elif direction == 0:
-        if area == 3:
-            z = t * np.exp(1j * phi)
-        elif area == 2:
-            z = 1j * t - re_max
-        elif area == 1:
-            z = t
-        elif area == 4:
-            z = 1j * t + re_max
-        elif area == 5:
-            z = t
-
-    return(z)
 
 
 def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
@@ -82,7 +32,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
             k-vector value, 2pi/\lambda_0 = \omega/c;
         eps_out, eps_in : complex
             electric permetivity outside and inside the fiber
-        rc : float 
+        rc : float
             fiber radius;
         n : int
             mode order;
@@ -100,43 +50,51 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
 
     """
 
-    k1 = np.sqrt(eps_out + 0j) * k
-    k2 = np.sqrt(eps_in + 0j) * k
+    k1 = np.sqrt(eps_out) * k
+    k2 = np.sqrt(eps_in) * k
     a = np.sqrt(eps_out * k**2 - x**2 + 0j)
     b = np.sqrt(eps_in * k**2 - x**2 + 0j)
 
-    Hn1r = sp.hankel1(n, a * rr)
-    Hn1s = sp.hankel1(n, a * rs)
+    arr = a * rr
+    ars = a * rs
+    brc = b * rc
+    arc = a * rc
 
-    DHn1r = sp.h1vp(n, a * rr)
-    DHn1s = sp.h1vp(n, a * rs)
+    Hn1r = sp.hankel1(n, arr)
+    Hn1s = sp.hankel1(n, ars)
 
-    DJnb = sp.jvp(n, b * rc)
-    Jnb = sp.jn(n, b * rc)
+    DHn1r = sp.h1vp(n, arr)
+    DHn1s = sp.h1vp(n, ars)
 
-    DJna = sp.jvp(n, a * rc)
-    Jna = sp.jn(n, a * rc)
+    DJnb = sp.jvp(n, brc)
+    Jnb = sp.jn(n, brc)
 
-    DHna = sp.h1vp(n, a * rc)
-    Hna = sp.hankel1(n, a * rc)
+    DJna = sp.jvp(n, arc)
+    Jna = sp.jn(n, arc)
+
+    DHna = sp.h1vp(n, arc)
+    Hna = sp.hankel1(n, arc)
+
+    a2_b2 = (1 / a**2 - 1 / b**2)
+    b2_a2_2 = a2_b2**2
 
     Det = rc**2 * (k2**2 * DJnb / (b * Jnb) - k1**2 * DHna / (a * Hna)) * \
           (DJnb / (b * Jnb) - DHna / (a * Hna)) - \
-          (n**2) * (x**2) * ((1/b**2 - 1/a**2)**2)
+          (n**2) * (x**2) * b2_a2_2
     # y = ( ( (k2^2*DJn(n,b*rc))./(b.*besselj(n,b*rc)) - (k1^2*DHn(n,a*rc))./...
     #     (a.*besselh(n,a*rc)) ).*( (DJn(n,b*rc))./(b.*besselj(n,b*rc)) - (DHn(n,a*rc))./...
     #     (a.*besselh(n,a*rc)) ) )*rc^2 - n^2*(k1^2-a.^2).*(( b.^(-2) - a.^(-2) ).^2);
 
     ### FRESNEL COEFFICIENTS 
-    Rn11mm = - Jna / Hna / Det * ((k2**2 * DJnb / (b * Jnb) - k1**2 * DHna / (a * Hna)) * \
-             (DJnb / (b * Jnb) - DJna / (a * Jna)) * rc**2 - n**2 * x**2 * ((1/a**2 - 1/b**2)**2))
+    Rn11mm = - Jna / (Hna * Det) * ((k2**2 * DJnb / (b * Jnb) - k1**2 * DHna / (a * Hna)) * \
+             (DJnb / (b * Jnb) - DJna / (a * Jna)) * rc**2 - n**2 * x**2 * b2_a2_2)
 
-    Rn11mn = k1 * n * rc * x * Jna / a / Hna /Det * (1/a**2 - 1/b**2) * (DJna / Jna - DHna / Hna)
-    Rn11nm = k1 * n * rc * x * Jna / a /Hna /Det * (1/a**2 - 1/b**2 ) * (DJna / Jna - DHna / Hna)
-    Rn11nn = Jna / Hna * ((1/b**2 - 1/a**2)**2 * n**2 * x**2 -
+    Rn11mn = k1 * n * rc * x * Jna / (a * Hna * Det) * a2_b2 * (DJna / Jna - DHna / Hna)
+    Rn11nm = Rn11mn
+    Rn11nn = Jna / Hna * (b2_a2_2 * n**2 * x**2 -
              (DJnb / (Jnb * b) - DHna / (Hna * a)) *
               (DJnb * k2**2 / (Jnb * b) - DJna * k1**2 / (Jna * a)) * rc**2) / \
-             ( -(1/b**2 - 1/a**2)**2 * n**2 * x**2 + (DJnb / (Jnb * b) - 
+             ( -b2_a2_2 * n**2 * x**2 + (DJnb / (Jnb * b) - 
              DHna / (Hna * a)) * (DJnb * k2**2 / (Jnb * b) - DHna * k1**2 / (Hna * a)) * rc**2)
 
     iG = 0j
@@ -153,7 +111,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     elif i == 1 and j == 2:
         iGNrp11mm = n * Hn1r * DHn1s * Rn11mm / (rr * a)
         iGNrp11nm = x * DHn1r * DHn1s * Rn11nm / k1
-        iGNrp11mn = Hn1r * Hn1s * n**2 * x * Rn11mn / k1 / rr / rs / a**2
+        iGNrp11mn = Hn1r * Hn1s * n**2 * x * Rn11mn / (k1 * rr * rs * a**2)
         iGNrp11nn = DHn1r * Hn1s * n * Rn11nn * x**2 / (k1**2 * rs * a)
 
         iG = (2 - np.kron(n, 0)) * 1j * (iGNrp11mm + iGNrp11nm +
@@ -161,12 +119,10 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # rz component
     elif i == 1 and j == 3:
-        iGNrz11mm = 0.0
-        iGNrz11nm = 0.0
         iGNrz11mn = 1j * Hn1r * Hn1s * n * Rn11mn / k1 / rr
         iGNrz11nn = 1j * a * DHn1r * Hn1s * Rn11nn * x / k1 / k1
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNrz11mm + iGNrz11nm +
+        iG = (2 - np.kron(n, 0)) * 1j * (
              iGNrz11mn + iGNrz11nn) * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # pr component
@@ -191,33 +147,27 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # pz component
     elif i == 2 and j == 3:
-        iGNpz11mm = 0.0
-        iGNpz11nm = 0.0
         iGNpz11mn = - 1j * a * DHn1r * Hn1s * Rn11mn / k1
         iGNpz11nn = - 1j * Hn1r * Hn1s * n * Rn11nn * x / (k1**2 * rr)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNpz11mm + iGNpz11nm +
+        iG = (2 - np.kron(n, 0)) * 1j * (
              iGNpz11mn + iGNpz11nn) * np.sin(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zr component
     elif i == 3 and j == 1:
-        iGNzr11mm = 0.0
         iGNzr11nm = - 1j * Hn1r * Hn1s * n * Rn11nm / (k1 * rs)
-        iGNzr11mn = 0.0
         iGNzr11nn = - 1j * a * DHn1s * Hn1r * Rn11nn * x / k1**2
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNzr11mm + iGNzr11nm + 
-             iGNzr11mn + iGNzr11nn) * np.cos(n * (pr - ps)) * \
+        iG = (2 - np.kron(n, 0)) * 1j * (iGNzr11nm + 
+             iGNzr11nn) * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zp component
     elif i == 3 and j == 2:
-        iGNzp11mm = 0.0
         iGNzp11nm = -1j * a * DHn1s * Hn1r * Rn11nm / k1
-        iGNzp11mn = 0.0
         iGNzp11nn = -1j * Hn1r * Hn1s * n * Rn11nn * x / (k1**2 * rs)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNzp11mm + iGNzp11nm +
-            iGNzp11mn + iGNzp11nn) * np.sin(n * (pr - ps)) * \
+        iG = (2 - np.kron(n, 0)) * 1j * (iGNzp11nm +
+            iGNzp11nn) * np.sin(n * (pr - ps)) * \
             np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zz component
     elif i == 3 and j == 3:
@@ -230,8 +180,54 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
 
 def KOSTYL(t, direction, area, im_max, re_max, theta,
            k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
-    return(iGNSFF11(zzz(t, direction, area, im_max, re_max, theta),
-                    k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
+    # contour parametrization
+    z = 0.0
+
+    """
+    AREAS:
+
+                   | Im kz
+             *     |
+         (2) * *   |(3)
+             *   * |            (5)       Re kz
+    **********-----*-----**************-----
+      (1)          | *   *
+                   |   * * (4)
+                   |     *
+                   |
+    """
+
+    # forward
+    if direction == 1:
+        if area == 3:
+            z = t * np.exp(1j * theta)
+        elif area == 4:
+            z = 1j * t + re_max
+        elif area == 5:
+            z = t
+    # backward
+    elif direction == -1:
+        if area == 3:
+            z = t * np.exp(1j * theta)
+        elif area == 2:
+            z = 1j * t - re_max
+        elif area == 1:
+            z = t
+
+    # both
+    elif direction == 0:
+        if area == 3:
+            z = t * np.exp(1j * theta)
+        elif area == 2:
+            z = 1j * t - re_max
+        elif area == 1:
+            z = t
+        elif area == 4:
+            z = 1j * t + re_max
+        elif area == 5:
+            z = t
+
+    return(iGNSFF11(z, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
 
 
 def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
@@ -283,10 +279,9 @@ def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     r2, p2 = cart2pol(r2_vec[0], r2_vec[1])
     z2 = r2_vec[2]
 
-    k2 = np.sqrt(eps_in + 0j).real * k
-    dkz = - k * 1e-8
+    k2 = np.sqrt(eps_in) * k
 
-    kzReMax = kzimax * np.sqrt(eps_in + 0j).real
+    kzReMax = kzimax * np.sqrt(eps_in)
     kzImMax = k * 1e-4  # choose this quantity to be smaller for 
                         # larger interatomic distances dz, since exp(1i k_z delta_z) 
 
@@ -315,37 +310,37 @@ def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
         # REGULAR CASE: ANY STRUCTURE, ALL MODES
         if direction == 0:
             # area = 1
-            GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2,
-                                     args=(direction, 1, kzImMax, 1.1 * k2, k, theta,
-                                           eps_out, eps_in, rc, num, r1, r2,
-                                           p1, p2, z1, z2, i, j),
-                                     limit=MaxIntervalCount)
+            GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
+                                     direction, 1, kzImMax, 1.1 * k2, theta, k,
+                                     eps_out, eps_in, rc, num, r1, r2,
+                                     p1, p2, z1, z2, i, j)
             # area = 2
-            GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax,
-                                     args=(direction, 2, kzImMax, 1.1 * k2, k, theta,
-                                           eps_out, eps_in, rc, num, r1, r2,
-                                           p1, p2, z1, z2, i, j),
-                                     limit=MaxIntervalCount)
+            GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
+                                     direction, 1, kzImMax, 1.1 * k2, theta, k,
+                                     eps_out, eps_in, rc, num, r1, r2,
+                                     p1, p2, z1, z2, i, j)
             # area = 3
             GNS11mat += np.exp(1j * theta) \
                     * complex_quad(KOSTYL, - np.sqrt(kzImMax**2 + (1.1 * k2)**2),
                                              np.sqrt(kzImMax**2 + (1.1 * k2)**2),
-                                     args=(direction, 3, kzImMax, 1.1 * k2, k, theta,
-                                           eps_out, eps_in, rc, num, r1, r2,
-                                           p1, p2, z1, z2, i, j),
-                                     limit=MaxIntervalCount)
+                                     MaxIntervalCount,
+                                     direction, 1, kzImMax, 1.1 * k2, theta, k,
+                                     eps_out, eps_in, rc, num, r1, r2,
+                                     p1, p2, z1, z2, i, j)
             # area = 4
-            GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0,
-                                     args=(direction, 4, kzImMax, 1.1 * k2, k, theta,
-                                           eps_out, eps_in, rc, num, r1, r2,
-                                           p1, p2, z1, z2, i, j),
-                                     limit=MaxIntervalCount)
+            GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
+                                     direction, 1, kzImMax, 1.1 * k2, theta, k,
+                                     eps_out, eps_in, rc, num, r1, r2,
+                                     p1, p2, z1, z2, i, j)
             # area = 5
-            GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax,
-                                     args=(direction, 5, kzImMax, 1.1 * k2, k, theta,
-                                           eps_out, eps_in, rc, num, r1, r2,
-                                           p1, p2, z1, z2, i, j),
-                                     limit=MaxIntervalCount)
+            GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
+                                     direction, 1, kzImMax, 1.1 * k2, theta, k,
+                                     eps_out, eps_in, rc, num, r1, r2,
+                                     p1, p2, z1, z2, i, j)
+
+            ## Direct integration along Real axis
+            #GNS11mat += complex_quad(iGNSFF11, -kzReMax, kzReMax, MaxIntervalCount,
+            #                         k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
         else:
             GNS11mat = 0.
             print('GF_fiber ERROR: direction != -1, 0, 1')
