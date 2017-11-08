@@ -3,6 +3,13 @@ import scipy.special as sp
 from scipy.integrate import quad
 
 
+def delta(i, j):
+    if i == j:
+        return(1)
+    else:
+        return(0)
+
+
 def complex_quad(func, a, b, limit=50, *args):
     def RE(x):
         return func(x, *args).real
@@ -99,79 +106,79 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
 
     iG = 0j
     # rr component
-    if i == 1 and j == 1:
+    if i == 0 and j == 0:
         iGNrr11mm = Hn1r * Hn1s * n**2 * Rn11mm / (rr * rs * a**2)
         iGNrr11nm = DHn1r * Hn1s * n * Rn11nm * x / (k1 * rs * a)
         iGNrr11mn = DHn1s * Hn1r * n * Rn11mn * x / (k1 * rr * a)
         iGNrr11nn = DHn1r * DHn1s * Rn11nn * x**2 / k1**2
           
-        iG = (2 - np.kron(n, 0)) * 1j * np.cos(n * (pr - ps)) * (iGNrr11mm +
+        iG = (2 - delta(n, 0)) * 1j * np.cos(n * (pr - ps)) * (iGNrr11mm +
              iGNrr11nm + iGNrr11mn + iGNrr11nn) * np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # rp component
-    elif i == 1 and j == 2:
+    elif i == 0 and j == 1:
         iGNrp11mm = n * Hn1r * DHn1s * Rn11mm / (rr * a)
         iGNrp11nm = x * DHn1r * DHn1s * Rn11nm / k1
         iGNrp11mn = Hn1r * Hn1s * n**2 * x * Rn11mn / (k1 * rr * rs * a**2)
         iGNrp11nn = DHn1r * Hn1s * n * Rn11nn * x**2 / (k1**2 * rs * a)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNrp11mm + iGNrp11nm +
+        iG = (2 - delta(n, 0)) * 1j * (iGNrp11mm + iGNrp11nm +
              iGNrp11mn + iGNrp11nn) * np.sin(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # rz component
-    elif i == 1 and j == 3:
+    elif i == 0 and j == 2:
         iGNrz11mn = 1j * Hn1r * Hn1s * n * Rn11mn / k1 / rr
         iGNrz11nn = 1j * a * DHn1r * Hn1s * Rn11nn * x / k1 / k1
 
-        iG = (2 - np.kron(n, 0)) * 1j * (
+        iG = (2 - delta(n, 0)) * 1j * (
              iGNrz11mn + iGNrz11nn) * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # pr component
-    elif i == 2 and j == 1:
+    elif i == 1 and j == 0:
         iGNpr11mm = - DHn1r * Hn1s * n * Rn11mm / (rs * a)
         iGNpr11nm = - Hn1r * Hn1s * n**2 * Rn11nm * x / (k1 * rr * rs * a**2)
         iGNpr11mn = - DHn1r * DHn1s * Rn11mn * x / k1
         iGNpr11nn = - DHn1s * Hn1r * n * Rn11nn * x**2 / (k1**2 * rr * a)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNpr11mm + iGNpr11nm +
+        iG = (2 - delta(n, 0)) * 1j * (iGNpr11mm + iGNpr11nm +
              iGNpr11mn + iGNpr11nn) * np.sin(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)    
     # pp component
-    elif i == 2 and j == 2:
+    elif i == 1 and j == 1:
         iGNpp11mm = Rn11mm * DHn1r * DHn1s
         iGNpp11nm = n * x * Rn11nm * Hn1r * DHn1s / (k1 * rr * a)
         iGNpp11mn = n * Rn11mn * DHn1r * Hn1s * x / (k1 * rs * a)
         iGNpp11nn = n**2 * x**2 * Rn11nn * Hn1r * Hn1s / (k1**2 * rr * rs * a**2)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNpp11mm + iGNpp11nm +
+        iG = (2 - delta(n, 0)) * 1j * (iGNpp11mm + iGNpp11nm +
              iGNpp11mn + iGNpp11nn) * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # pz component
-    elif i == 2 and j == 3:
+    elif i == 1 and j == 2:
         iGNpz11mn = - 1j * a * DHn1r * Hn1s * Rn11mn / k1
         iGNpz11nn = - 1j * Hn1r * Hn1s * n * Rn11nn * x / (k1**2 * rr)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (
+        iG = (2 - delta(n, 0)) * 1j * (
              iGNpz11mn + iGNpz11nn) * np.sin(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zr component
-    elif i == 3 and j == 1:
+    elif i == 2 and j == 0:
         iGNzr11nm = - 1j * Hn1r * Hn1s * n * Rn11nm / (k1 * rs)
         iGNzr11nn = - 1j * a * DHn1s * Hn1r * Rn11nn * x / k1**2
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNzr11nm + 
+        iG = (2 - delta(n, 0)) * 1j * (iGNzr11nm + 
              iGNzr11nn) * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zp component
-    elif i == 3 and j == 2:
+    elif i == 2 and j == 1:
         iGNzp11nm = -1j * a * DHn1s * Hn1r * Rn11nm / k1
         iGNzp11nn = -1j * Hn1r * Hn1s * n * Rn11nn * x / (k1**2 * rs)
 
-        iG = (2 - np.kron(n, 0)) * 1j * (iGNzp11nm +
+        iG = (2 - delta(n, 0)) * 1j * (iGNzp11nm +
             iGNzp11nn) * np.sin(n * (pr - ps)) * \
             np.exp(1j * x * (zr - zs)) / (8 * np.pi)
     # zz component
-    elif i == 3 and j == 3:
-        iG = (2 - np.kron(n, 0)) * 1j * Rn11nn * Hn1r * \
+    elif i == 2 and j == 2:
+        iG = (2 - delta(n, 0)) * 1j * Rn11nn * Hn1r * \
              Hn1s * a**2 * np.cos(n * (pr - ps)) * \
              np.exp(1j * x * (zr - zs)) / (k1**2 * 8 * np.pi)
 
@@ -231,7 +238,7 @@ def KOSTYL(t, direction, area, im_max, re_max, theta,
 
 
 def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
-             i, j, tol, kzimax, direction):
+             i, j, tol, kzimax, direction=0):
     """Fiber Green's function
 
     Parameters
