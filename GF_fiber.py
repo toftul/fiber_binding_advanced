@@ -1,3 +1,9 @@
+"""
+@author: ivan
+
+Last change: 08.11.2017
+"""
+
 import numpy as np
 import scipy.special as sp
 from scipy.integrate import quad
@@ -237,8 +243,8 @@ def KOSTYL(t, direction, area, im_max, re_max, theta,
     return(iGNSFF11(z, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
 
 
-def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
-             i, j, tol, kzimax, direction=0):
+def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
+             i, j, kzimax, tol=1e-8, direction=0):
     """Fiber Green's function
 
     Parameters
@@ -361,3 +367,28 @@ def GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
         nmodes += 1
 
     return GNS11mat, nmodes
+
+
+def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
+          nmin, nmax, kzimax, tol=1e-8, direction=0):
+    '''Returns full tensor Gs in Cartesian coordinates
+    '''
+    Gs = np.identity(3)
+
+    for i in range(3):
+        for j in range(3):
+            Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
+                                rc, r1_vec, r2_vec,
+                                nmin, nmax, i, j, kzimax)
+
+    phi1 = 0.0
+    phi2 = 0.0
+    Q1 = np.array([[np.cos(phi1), -np.sin(phi1), 0],
+                  [np.sin(phi1), np.cos(phi1), 0],
+                  [0, 0, 1]])
+    Q2T = np.array([[np.cos(phi2), np.sin(phi2), 0],
+                  [-np.sin(phi2), np.cos(phi2), 0],
+                  [0, 0, 1]])
+
+    # T_car = Q^T T_pol Q
+    return(np.dot(Q2T, np.dot(Gs, Q1)))

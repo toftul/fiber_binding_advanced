@@ -11,9 +11,7 @@ nmin = -40
 r1_vec = np.array([0.55, 0, 0])
 r2_vec = np.array([0.55, 0, 1])
 rc = 0.5
-tol = 1e-8
 
-
-G = GF_fiber.GF_fiber(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax, 1, 1, tol, kzimax, 0)
+G = GF_fiber.GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax, 0, 0, kzimax)
 
 print(G)

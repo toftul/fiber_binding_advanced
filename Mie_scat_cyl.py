@@ -1,3 +1,10 @@
+"""
+@author: ivan
+
+Last change: 07.11.2017
+"""
+
+
 import numpy as np
 import scipy.special as sp
 
@@ -9,11 +16,11 @@ import scipy.special as sp
 def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
     """Scattered plane wave el-field from an infinite cylinder
     Case I: a Transverse Magnetic (TM) mode. 
-    The magnetic field of the incident wave is 
-    perpendicular to the cylinder axis.
+        The magnetic field of the incident wave is 
+        perpendicular to the cylinder axis.
     Case II: a Transverse Electric (TE) mode.
-    The electric field is perpendicular 
-    to the cylinder axis.
+        The electric field is perpendicular 
+        to the cylinder axis.
 
     Only for normal incident light (zeta = pi/2) 
     which simplifies to 
