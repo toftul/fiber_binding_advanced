@@ -28,6 +28,11 @@ def complex_quad(func, a, b, limit=50, *args):
 
 
 def cart2pol(x, y):
+    """
+    Returns
+    -------
+        rho, phi : float
+    """
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return(rho, phi)
@@ -246,6 +251,19 @@ def KOSTYL(t, direction, area, im_max, re_max, theta,
 def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
              i, j, kzimax, tol=1e-8, direction=0):
     """Fiber Green's function
+    
+    Symmetry properties
+    -------------------
+        
+                | G11 G12 G13 |
+    G(r1, r2) = | G21 G22 G23 |
+                | G31 G32 G33 |
+                     
+                | G11 ... G31 |
+    G(r2, r1) = | ... ... G32 |
+                | G13 G23 G33 |
+    
+    where '...' means something different
 
     Parameters
     ----------
@@ -257,7 +275,7 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
             fiber radius;
         r1_vec, r2_vec : numpy 2D array
             positions of the source and the reciever,
-            r = (x, y, z)
+            r = (rho, theta, z)
         nmin : int
             minimal mode number in the sum;
         nmac : int
@@ -286,11 +304,9 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 
     """
 
-    # cartesian to polar 
-    r1, p1 = cart2pol(r1_vec[0], r1_vec[1])
-    z1 = r1_vec[2]
-    r2, p2 = cart2pol(r2_vec[0], r2_vec[1])
-    z2 = r2_vec[2]
+    # cartesian to polar (projectures)
+    r1, p1, z1 = r1_vec[0], r1_vec[1], r1_vec[2]
+    r2, p2, z2 = r2_vec[0], r2_vec[1], r2_vec[2]
 
     k2 = np.sqrt(eps_in) * k
 
@@ -368,27 +384,61 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 
     return GNS11mat, nmodes
 
+def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
+           nmin, nmax, kzimax, tol=1e-8, direction=0):
+    '''Returns full tensor Gs in polar coordinates
+    
+    Parameters
+    ----------
+        r1_vec, r2_vec : numpy arrays
+            in polar coordinates (rho, theta, z)
+    '''
+    
+    Gs = np.identity(3)
+    for i in range(3):
+        for j in range(3):
+            Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
+                                rc, r1_vec_pol, r2_vec_pol,
+                                nmin, nmax, i, j, kzimax)
+            
+    return(Gs)
+    
 
+# not yet done!
 def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
           nmin, nmax, kzimax, tol=1e-8, direction=0):
     '''Returns full tensor Gs in Cartesian coordinates
+    
+    Parameters
+    ----------
+        r1_vec, r2_vec : numpy arrays
+            in cart. coordinates
     '''
     Gs = np.identity(3)
+    
+    r1p = np.zeros(3)
+    r2p = r1p
+    
+    r1p[0], r1p[1] = cart2pol(r1_vec[0], r1_vec[1])
+    r1p[2] = r1_vec[2]
+    
+    r2p[0], r2p[1] = cart2pol(r2_vec[0], r2_vec[1])
+    r2p[2] = r2_vec[2]
 
     for i in range(3):
         for j in range(3):
             Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
-                                rc, r1_vec, r2_vec,
+                                rc, r1p, r2p,
                                 nmin, nmax, i, j, kzimax)
 
-    phi1 = 0.0
-    phi2 = 0.0
-    Q1 = np.array([[np.cos(phi1), -np.sin(phi1), 0],
-                  [np.sin(phi1), np.cos(phi1), 0],
+    theta1 = r1p[1]
+    theta2 = r2p[1]
+    Q1 = np.array([[np.cos(theta1), np.sin(theta1), 0],
+                  [-np.sin(theta1), np.cos(theta1), 0],
                   [0, 0, 1]])
-    Q2T = np.array([[np.cos(phi2), np.sin(phi2), 0],
-                  [-np.sin(phi2), np.cos(phi2), 0],
+    Q2T = np.array([[np.cos(theta2), -np.sin(theta2), 0],
+                  [np.sin(theta2), np.cos(theta2), 0],
                   [0, 0, 1]])
 
-    # T_car = Q^T T_pol Q
-    return(np.dot(Q2T, np.dot(Gs, Q1)))
+    # T_car = Q1 T_pol Q2^T
+    return(Q1 @ Gs @ Q2T)

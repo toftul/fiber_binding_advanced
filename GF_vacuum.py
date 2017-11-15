@@ -44,7 +44,7 @@ def GF_vac(R, k):
     return G
 
 
-def GF_vac_pol(R, k):
+def GF_vac_pol(r1_pol, r2_pol, k):
     """Green's function of Maxwell eq. in a free space
     in polar coordinates
         
@@ -54,7 +54,10 @@ def GF_vac_pol(R, k):
 
     Parameters
     ----------
-        R : numpy 1D array 1x3;
+        r1_pol, r2_pol : numpy 1D array 1x3;
+            r_pol = (rho, theta, z)
+            r1 -- source position;
+            r2 -- reciever postion;
         k : float
             k-vector value, 2pi/\lambda_0 = \omega/c;
 
@@ -70,18 +73,21 @@ def GF_vac_pol(R, k):
         omega -- radiation frequency
 
     """
-    G_car = GF_vac(R, k)
-    if R[0] == 0 and R[1] > 0:
-        theta = np.pi / 2
-    elif R[0] == 0 and R[1] < 0:
-        theta = - np.pi / 2
-    elif R[0] == 0 and R[1] == 0:
-        theta = 0.
-    else:
-        theta = np.arctan(R[1] / R[0])
+    r1 = np.array([r1_pol[0] * np.cos(r1_pol[1]),
+                   r1_pol[0] * np.sin(r1_pol[1]),
+                   r1_pol[2]])
+    r2 = np.array([r2_pol[0] * np.cos(r2_pol[1]),
+                   r2_pol[0] * np.sin(r2_pol[1]),
+                   r2_pol[2]])
+    
+    G_car = GF_vac(r1 - r2, k)
 
-    Q = np.array([[np.cos(theta), np.sin(theta), 0],
-                  [-np.sin(theta), np.cos(theta), 0],
+    Q1 = np.array([[np.cos(r1_pol[1]), np.sin(r1_pol[1]), 0],
+                  [-np.sin(r1_pol[1]), np.cos(r1_pol[1]), 0],
+                  [0, 0, 1]])
+    
+    Q2 = np.array([[np.cos(r2_pol[1]), np.sin(r2_pol[1]), 0],
+                  [-np.sin(r2_pol[1]), np.cos(r2_pol[1]), 0],
                   [0, 0, 1]])
 
-    return Q.transpose() @ G_car @ Q
+    return Q1.transpose() @ G_car @ Q2

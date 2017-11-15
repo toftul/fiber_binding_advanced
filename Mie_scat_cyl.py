@@ -14,7 +14,8 @@ import scipy.special as sp
 
 
 def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
-    """Scattered plane wave el-field from an infinite cylinder
+    """Scattered plane wave el-field from an infinite cylinder 
+       in cylindrical coodinates 
     Case I: a Transverse Magnetic (TM) mode. 
         The magnetic field of the incident wave is 
         perpendicular to the cylinder axis.
