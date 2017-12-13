@@ -4,7 +4,7 @@ import GF_fiber as gff
 import GF_vacuum as gfv
 import Mie_scat_cyl
 import Mie_polarizability as mie_alpha
-
+import matplotlib.pyplot as plt
 
 def cart2pol(r):
     rho = np.sqrt(r[0]**2 + r[1]**2)
@@ -117,17 +117,17 @@ def dipole_moment(i, r1, r2, R_particle, eps_particle,
 
     Gsji = Gsij.transpose()
     Gsji[0, 1] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               0, 1, kzimax)
+                               0, 1, kzimax)[0]
     Gsji[1, 1] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               1, 1, kzimax)
+                               1, 1, kzimax)[0]
     Gsji[1, 0] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               1, 0, kzimax)
+                               1, 0, kzimax)[0]
 
     Gij = G0ij + Gsij
     Gji = G0ji + Gsji
 
-    alpha_sj = alpha0 * np.inv(np.eye(3) - alpha0 * k2_eps0 * Gsjj)
-    alpha_si = alpha0 * np.inv(np.eye(3) - alpha0 * k2_eps0 * Gsii)
+    alpha_sj = alpha0 * np.linalg.inv(np.eye(3) - alpha0 * k2_eps0 * Gsjj)
+    alpha_si = alpha0 * np.linalg.inv(np.eye(3) - alpha0 * k2_eps0 * Gsii)
 
     E0j = E0_sum(rj, k, fiber_radius, eps_out, eps_in,
                  E0_mod, nmin_sc, nmax_sc, case)
@@ -257,7 +257,7 @@ def force_12(alpha, r1, r2, R_particle, eps_particle, k, eps_out, eps_in,
     """
 
     dr = 1 / k * 1e-5
-    dz = dr 
+    dz = dr
     dtheta = 1e-5
 
     p1 = dipole_moment(1, r1, r2, R_particle, eps_particle, k, eps_out, eps_in,
@@ -265,45 +265,86 @@ def force_12(alpha, r1, r2, R_particle, eps_particle, k, eps_out, eps_in,
                        E0_mod, nmin_sc, nmax_sc, case)
     p1c = p1.conjugate()
 
-    r1plusdr = r1 + np.array([dr, 0, 0])
-    r1minusdr = r1 - np.array([dr, 0, 0])
-    
-    r1plusdtheta = r1 + np.array([0, dtheta, 0])
-    r1minusdtheta = r1 - np.array([0, dtheta, 0])
-    
-    r1plusdz = r1 + np.array([0, 0, dz])
-    r1minusdz = r1 - np.array([0, 0, dz])
-
-
-    Eplusr = total_loc_efield(1, r1plusdr, r2, k, case, nmin, nmax, kzimax,
-                              fiber_radius, eps_out, eps_in, E0_mod,
-                              nmin_sc, nmax_sc, R_particle, eps_particle)
-    Eminusr = total_loc_efield(1, r1minusdr, r2, k, case, nmin, nmax, kzimax,
-                               fiber_radius, eps_out, eps_in, E0_mod,
-                               nmin_sc, nmax_sc, R_particle, eps_particle)
-    grad_r = (Eplusr - Eminusr) / (2 * dr)
-
-    Eplustheta = total_loc_efield(1, r1plusdtheta, r2, k, case, nmin, nmax, kzimax,
+    # Fr
+    if alpha == 0:
+        r1plusdr = r1 + np.array([dr, 0, 0])
+        r1minusdr = r1 - np.array([dr, 0, 0])
+        Eplusr = total_loc_efield(1, r1plusdr, r2, k, case, nmin, nmax, kzimax,
                                   fiber_radius, eps_out, eps_in, E0_mod,
                                   nmin_sc, nmax_sc, R_particle, eps_particle)
-    Eminustheta = total_loc_efield(1, r1minusdtheta, r2, k, case, nmin, nmax, kzimax,
+        Eminusr = total_loc_efield(1, r1minusdr, r2, k, case, nmin, nmax, kzimax,
                                    fiber_radius, eps_out, eps_in, E0_mod,
                                    nmin_sc, nmax_sc, R_particle, eps_particle)
-    grad_theta = (Eplustheta - Eminustheta) / (r1[0] * 2 * dtheta)
+        grad_r = (Eplusr - Eminusr) / (2 * dr)
 
-    Eplusz = total_loc_efield(1, r1plusdz, r2, k, case, nmin, nmax, kzimax,
-                              fiber_radius, eps_out, eps_in, E0_mod,
-                              nmin_sc, nmax_sc, R_particle, eps_particle)
-    Eminusz = total_loc_efield(1, r1minusdz, r2, k, case, nmin, nmax, kzimax,
-                               fiber_radius, eps_out, eps_in, E0_mod,
-                               nmin_sc, nmax_sc, R_particle, eps_particle)
-    grad_z = (Eplusz - Eminusz) / (2 * dz)
+        return(0.5 * np.dot(p1c, grad_r).real)
+    # Ftheta
+    elif alpha == 1:
+        r1plusdtheta = r1 + np.array([0, dtheta, 0])
+        r1minusdtheta = r1 - np.array([0, dtheta, 0])
+
+        Eplustheta = total_loc_efield(1, r1plusdtheta, r2, k, case, nmin, nmax, kzimax,
+                                      fiber_radius, eps_out, eps_in, E0_mod,
+                                      nmin_sc, nmax_sc, R_particle, eps_particle)
+        Eminustheta = total_loc_efield(1, r1minusdtheta, r2, k, case, nmin, nmax, kzimax,
+                                       fiber_radius, eps_out, eps_in, E0_mod,
+                                       nmin_sc, nmax_sc, R_particle, eps_particle)
+        grad_theta = (Eplustheta - Eminustheta) / (r1[0] * 2 * dtheta)
+
+        return(0.5 * np.dot(p1c, grad_theta).real)
+    # Fz
+    elif alpha == 2:
+        r1plusdz = r1 + np.array([0, 0, dz])
+        r1minusdz = r1 - np.array([0, 0, dz])
+
+        Eplusz = total_loc_efield(1, r1plusdz, r2, k, case, nmin, nmax, kzimax,
+                                  fiber_radius, eps_out, eps_in, E0_mod,
+                                  nmin_sc, nmax_sc, R_particle, eps_particle)
+        Eminusz = total_loc_efield(1, r1minusdz, r2, k, case, nmin, nmax, kzimax,
+                                   fiber_radius, eps_out, eps_in, E0_mod,
+                                   nmin_sc, nmax_sc, R_particle, eps_particle)
+        grad_z = (Eplusz - Eminusz) / (2 * dz)
+
+        return(0.5 * np.dot(p1c, grad_z).real)
+    else:
+        print('alpha is out of range!')
+        return(0)
 
 
-    F = np.zeros(3, dtype=complex)
-    F[0] = np.dot(p1c, grad_r)
-    F[1] = np.dot(p1c, grad_theta)
-    F[2] = np.dot(p1c, grad_z)
+R_particle = 200*1e-9
+eps_particle = 2.5
+lam = 550*1e-9
+k = 2*np.pi/lam
+eps_out = 1
+eps_in = 2.09
+fiber_radius = 100*1e-9
+nmin = 0
+nmax = 1
+kzimax = 15*k
 
 
-    return(0.5 * F.real)
+P_laser = 100e-3  # [W]
+R_focus = 1e-6  # [m]
+Intensity = P_laser / (np.pi * R_focus**2)  # [W/m^2]
+E0_mod = np.sqrt(0.5 * const.Z0 * Intensity)  # [V/m]
+
+
+nmin_sc = -40
+nmax_sc = 40
+case = 1
+r1 = np.array([fiber_radius + R_particle, 0, 0])
+r2 = np.array([fiber_radius + R_particle, 0, 2*R_particle])
+
+
+z_space = np.linspace(2 * R_particle, 1.5 * lam, 20)
+Fz_without_Esc = np.zeros(len(z_space))
+for i, zz in enumerate(z_space):
+    print('step = ', i)
+    r2 = np.array([fiber_radius + R_particle, 0, zz])
+    Fz_without_Esc[i] = force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
+              fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+    
+plt.plot(z_space/lam, Fz_without_Esc)
+plt.grid()
+plt.show()
+

@@ -394,12 +394,12 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
             in polar coordinates (rho, theta, z)
     '''
     
-    Gs = np.identity(3)
+    Gs = np.zeros([3, 3], dtype=complex)
     for i in range(3):
         for j in range(3):
             Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
                                 rc, r1_vec_pol, r2_vec_pol,
-                                nmin, nmax, i, j, kzimax)
+                                nmin, nmax, i, j, kzimax)[0]
             
     return(Gs)
     
@@ -414,7 +414,7 @@ def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
         r1_vec, r2_vec : numpy arrays
             in cart. coordinates
     '''
-    Gs = np.identity(3)
+    Gs = np.zeros([3, 3], dtype=complex)
     
     r1p = np.zeros(3)
     r2p = r1p
@@ -429,7 +429,7 @@ def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
         for j in range(3):
             Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
                                 rc, r1p, r2p,
-                                nmin, nmax, i, j, kzimax)
+                                nmin, nmax, i, j, kzimax)[0]
 
     theta1 = r1p[1]
     theta2 = r2p[1]

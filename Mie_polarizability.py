@@ -6,6 +6,7 @@ Last change: 08.11.2017
 
 import numpy as np
 import scipy.special as sp
+import const
 
 # Polarizability coef
 # psi
@@ -44,7 +45,7 @@ def a1(m, x):
 
 
 def polarizability(k, a, epsilon_p, epsilon_m):
-    """Calculates the exact polarizability of a sphere
+    """Calculates the exact polarizability of a sphere (SI units)
     
     Parameters
     ----------
@@ -63,4 +64,40 @@ def polarizability(k, a, epsilon_p, epsilon_m):
     """
     x = np.sqrt(epsilon_m) * k * a
     m = np.sqrt(epsilon_p / epsilon_m + 0j)
-    return(1.5j * a1(m, x) * (a / x)**3)
+    return(4 * np.pi * const.epsilon0 * 1.5j * a1(m, x) * (a / x)**3)
+    
+
+def polarizability_dipole(a, epsilon_p, epsilon_m):
+    """Calculates the exact polarizability of a sphere (SI units)
+    
+    Parameters
+    ----------
+        a : float
+            sphere radius;
+        epsilon_p, epsilon_m : complex
+            epsilon of particle and media
+    
+    Returns
+    -------
+        alpha : complex
+            polarizability of a sphere in a dipole approx
+    """
+    return(4 * np.pi * const.epsilon0 * a**3 * 
+           (epsilon_p - epsilon_m) / (epsilon_p + 2 * epsilon_m))
+
+'''    
+lam_space = np.linspace(200, 1200) * 1e-9
+k = 2 * np.pi / lam_space
+a = 100e-9
+eps_p = 2.2
+eps_m = 1.0
+
+alpa_mie = polarizability(k, a, eps_p, eps_m)
+alpa_dipole = polarizability_dipole(k, a, eps_p, eps_m)
+
+plt.plot(lam_space * 1e9, alpa_mie.real)
+plt.plot(lam_space * 1e9, alpa_mie.imag)
+plt.plot(lam_space * 1e9, alpa_dipole.real * k/k)
+plt.plot(lam_space * 1e9, alpa_dipole.imag * k/k)
+plt.show()
+'''
