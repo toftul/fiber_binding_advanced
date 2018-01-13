@@ -1,6 +1,6 @@
 import numpy as np
 import const
-import GF_fiber as gff
+import GF_fiber_cython as gff
 import GF_vacuum as gfv
 import Mie_scat_cyl
 import Mie_polarizability as mie_alpha

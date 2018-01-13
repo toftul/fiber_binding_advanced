@@ -9,7 +9,7 @@ import scipy.special as sp
 from scipy.integrate import quad
 
 
-def delta(i, j):
+cdef int delta(int i, int j):
     if i == j:
         return(1)
     else:
@@ -27,18 +27,21 @@ def complex_quad(func, a, b, limit=50, *args):
            1j * quad(IM, a, b, limit=limit)[0])
 
 
-def cart2pol(x, y):
+cdef double cart2pol(double x, double y):
     """
     Returns
     -------
         rho, phi : float
     """
+    cdef double rho, phi
     rho = np.sqrt(x*x + y*y)
     phi = np.arctan2(y, x)
     return(rho, phi)
 
 
-def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
+cdef double complex iGNSFF11(double complex x, double k, double eps_out, 
+            double eps_in, double rc, int n, double rr, double rs, double pr, 
+            double ps, double zr, double zs, int i, int j):
     """Fiber Green's function integrand
         Calculates the integrand of the scattered part of the Green's tensor of the fiber;
 
@@ -48,7 +51,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
             k_z, integration variable
         k : float
             k-vector value, 2pi/\lambda_0 = \omega/c;
-        eps_out, eps_in : complex
+        eps_out, eps_in : double
             electric permetivity outside and inside the fiber
         rc : float
             fiber radius;
@@ -67,6 +70,10 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
             one component of inetegrand iGij
 
     """
+    cdef double k1, k1_2, k2
+    cdef double complex a, b, arr, ars, brc, arc, Hn1r, Hn1s
+    cdef double complex DHn1r, DHn1s, DJnb, Jnb, DJna, Jna, DHna, Hna, a2_b2
+    cdef double complex Det, b2_a2_2, Rn11mm, iG, iGNrr11mm
 
     k1 = np.sqrt(eps_out) * k
     k1_2 = k1 * k1
@@ -116,7 +123,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
              ( -b2_a2_2 * n*n * x*x + (DJnb / (Jnb * b) - 
              DHna / (Hna * a)) * (DJnb * k2*k2 / (Jnb * b) - DHna * k1_2 / (Hna * a)) * rc*rc)
 
-    iG = 0j
+    iG = 0.0j
     # rr component
     if i == 0 and j == 0:
         iGNrr11mm = Hn1r * Hn1s * n*n * Rn11mm / (rr * rs * a*a)
@@ -197,10 +204,11 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     return iG
 
 
-def KOSTYL(t, area, im_max, re_max, theta,
-           k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
+cdef double complex KOSTYL(double t, int area, double im_max, double re_max,
+           double theta, double k, double eps_out, double eps_in, double rc, int n, 
+           double rr, double rs, double pr, double ps, double zr, double zs, int i, int j):
     # contour parametrization
-    z = 0.0
+    cdef double complex z = 0.0
 
     """
     AREAS:
@@ -230,8 +238,9 @@ def KOSTYL(t, area, im_max, re_max, theta,
     return(iGNSFF11(z, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
 
 
-def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
-             i, j, kzimax, tol=1e-8):
+cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
+            double rc, r1_vec, r2_vec, int nmin, int nmax,
+            int i, int j, double kzimax, tol=1e-8):
     """Fiber Green's function
     
     Symmetry properties
@@ -280,6 +289,10 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 
     """
 
+    cdef double r1, p1, z1, r2, p2, z2, k2, kzReMax, kzImMax, rel, theta, normGnprev
+    cdef double complex GNS11mat, Gnprev
+    cdef int nmodes, MaxIntervalCount, num
+
     # cartesian to polar (projectures)
     r1, p1, z1 = r1_vec[0], r1_vec[1], r1_vec[2]
     r2, p2, z2 = r2_vec[0], r2_vec[1], r2_vec[2]
@@ -306,6 +319,7 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     """
 
     GNS11mat = 0.  # Green's tensor component
+    nmodes = 0  # number of considered 'n' modes
     Gnprev = 1e9  # previous, it sums from nmin to nmax-1; when nmax = 0 Gnprev = 0;
 
     theta = - np.arctan(kzImMax / (1.1 * k2))
@@ -420,6 +434,7 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
         if rel < tol:
             break
         Gnprev = GNS11mat
+        nmodes += 1
 
     return GNS11mat
 
@@ -437,11 +452,11 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
     for i in range(3):
         for j in range(i, 3):
             Gs[i, j] = GF_pol_ij(k, eps_out, eps_in,
-                                     rc, r1_vec_pol, r2_vec_pol,
-                                     nmin, nmax, i, j, kzimax)
+                                rc, r1_vec_pol, r2_vec_pol,
+                                nmin, nmax, i, j, kzimax)
             if i != j:
                 Gs[j, i] = Gs[i, j]
-          
+            
     return(Gs)
     
 
