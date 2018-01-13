@@ -311,31 +311,19 @@ def force_12(alpha, r1, r2, R_particle, eps_particle, k, eps_out, eps_in,
         return(0)
 
 
-# single mode criteria
-def VVV_q(wl, rho_c, epsilon_fiber, epsilon_m):
-    V = 2*np.pi/wl * rho_c * np.sqrt(epsilon_fiber - epsilon_m)
-    Vcr = 2.405
-    lam_c = 1/Vcr * 2*np.pi * rho_c * np.sqrt(epsilon_fiber - epsilon_m)
-    if V < Vcr:
-        print('Single mode condition: PASSED!')
-        #print('V/Vc = %.3f/2.405 < 1'% V)
-    else:
-        print('Single mode condition: FAILED!')
-        #print('V/Vc = %.3f/2.405 > 1'% V)
-    print('lambda critical = %.1f' % (lam_c * 1e9))
 
 
-lam = 400*1e-9
+lam = 550*1e-9
 k = 2 * np.pi / lam
-R_particle = 150*1e-9
-fiber_radius = 150*1e-9
+R_particle = 100*1e-9
+fiber_radius = 100*1e-9
 
 eps_particle = 2.5
-eps_out = 1.77
+eps_out = 1
 eps_in = 2.09
 
-nmin = 0
-nmax = 1
+nmin = -3
+nmax = 3
 kzimax = 15*k
 
 
@@ -348,12 +336,12 @@ E0_mod = np.sqrt(0.5 * const.Z0 * Intensity)  # [V/m]
 
 nmin_sc = -60
 nmax_sc = 60
-case = 2
+case = 1
 r1 = np.array([fiber_radius + R_particle, 0, 0])
 r2 = np.array([fiber_radius + R_particle, 0, 2*R_particle])
 
 
-z_space = np.linspace(2 * R_particle, 8 * lam, 70)
+z_space = np.linspace(2 * R_particle, 7 * lam, 55)
 Fz = np.zeros(len(z_space))
 for i, zz in enumerate(z_space):
     print('step = ', i)
@@ -361,53 +349,10 @@ for i, zz in enumerate(z_space):
     Fz[i] = force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
               fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
     
-np.save('data_Fz_onemode_sc_TE', (z_space, Fz))
+np.save('Fz_manymodes_sc', (z_space, Fz))
+#z_space, Fz = np.load('Fz_manymodes_sc.npy')
 
-#z_space, Fz_1sc = np.load('Fz_onemode_sc.npy')
-#z_space, Fz_1wsc = np.load('Fz_onemode_without_sc.npy')
-#z_space, Fz_3sc = np.load('Fz_manymodes_sc.npy')
-#plt.plot(z_space/lam, Fz_1sc, '--', label='single mode + sc')
-#plt.plot(z_space/lam, Fz_1wsc, ':', label='single mode')
-#plt.plot(z_space/lam, Fz_3sc, 'k', label='many modes + sc')
-#plt.legend(shadow=True, fontsize='x-large')
-#plt.xlabel(r'$\Delta z / \lambda$')
-#plt.ylabel(r'$F_z$, N')
+#plt.plot(z_space/lam, Fz)
 #plt.grid()
 #plt.show()
-
-Rf_space = np.linspace(500, 100, 9) * 1e-9
-wl_space = np.linspace(200, 1200, 150) * 1e-9
-Vcr = 2.405
-Vcr2 = 2.55
-Vcr3 = 3.6
-
-
-for Rf in Rf_space:
-    V = 2*np.pi/wl_space * Rf * np.sqrt(eps_in - eps_out)
-    plt.plot(wl_space * 1e9, V, label="Rf = %.0f nm"% (Rf*1e9))
-    
-plt.plot(wl_space * 1e9, Vcr * np.ones(len(wl_space)), 'k--')
-plt.plot(wl_space * 1e9, Vcr2 * np.ones(len(wl_space)), 'k--', color='gray')
-plt.plot(wl_space * 1e9, Vcr3 * np.ones(len(wl_space)), 'k--', color='gray')
-plt.legend()
-plt.title(r'$\varepsilon_f$ = %.2f, $\varepsilon_m$ = %.2f' % (eps_in, eps_out), loc='right')
-plt.xlabel(r'$\lambda$, nm')
-plt.ylabel(r'$V$')
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

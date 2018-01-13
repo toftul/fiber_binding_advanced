@@ -14,8 +14,15 @@ from scipy.interpolate import interp1d
 c = 299792458  # [m/s]
 # vacuum permeability
 mu0 = 4 * np.pi * 1e-7  # [H / m]
+
+
 # vacuum permittivity
-epsilon0 = 1 / (mu0 * c**2)  # [F/m]
+# final values does not depend on epsilon0
+# in order to increase accuracy I put k = 1 and epsilon0 = 1
+# but in final expresion for force I need to multiply by real value of epsilon0
+# [F] = [p] [nabla] [E] = ... = [epsilon0] [V^2]
+epsilon0 = 1. / (mu0 * c**2)  # [F/m]
+epsilon00 = 1 / (mu0 * c**2)  # [F/m]
 
 Z0 = np.sqrt(mu0 / epsilon0)
 
