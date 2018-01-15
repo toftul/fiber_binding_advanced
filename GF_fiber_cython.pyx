@@ -16,17 +16,6 @@ cdef int delta(int i, int j):
         return(0)
 
 
-def complex_quad(func, a, b, limit=50, *args):
-    def RE(x):
-        return func(x, *args).real
-
-    def IM(x):
-        return func(x, *args).imag
-
-    return(quad(RE, a, b, limit=limit)[0] + 
-           1j * quad(IM, a, b, limit=limit)[0])
-
-
 cdef double cart2pol(double x, double y):
     """
     Returns
@@ -73,7 +62,7 @@ cdef double complex iGNSFF11(double complex x, double k, double eps_out,
     cdef double k1, k1_2, k2
     cdef double complex a, b, arr, ars, brc, arc, Hn1r, Hn1s
     cdef double complex DHn1r, DHn1s, DJnb, Jnb, DJna, Jna, DHna, Hna, a2_b2
-    cdef double complex Det, b2_a2_2, Rn11mm, iG, iGNrr11mm
+    cdef double complex Det, b2_a2_2, Rn11mm, iG, iGNrr11mm, iGNpp11nn, iGNpp11mn, iGNpp11nm
 
     k1 = np.sqrt(eps_out) * k
     k1_2 = k1 * k1
@@ -238,7 +227,7 @@ cdef double complex KOSTYL(double t, int area, double im_max, double re_max,
     return(iGNSFF11(z, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
 
 
-cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
+def GF_pol_ij(double k, double eps_out, double eps_in,
             double rc, r1_vec, r2_vec, int nmin, int nmax,
             int i, int j, double kzimax, tol=1e-8):
     """Fiber Green's function
@@ -288,6 +277,16 @@ cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
             condition for cutting the 'n' exists
 
     """
+    def complex_quad(func, a, b, limit=50, *args):
+        def RE(x):
+            return func(x, *args).real
+    
+        def IM(x):
+            return func(x, *args).imag
+    
+        return(quad(RE, a, b, limit=limit)[0] + 
+               1j * quad(IM, a, b, limit=limit)[0])
+    
 
     cdef double r1, p1, z1, r2, p2, z2, k2, kzReMax, kzImMax, rel, theta, normGnprev
     cdef double complex GNS11mat, Gnprev
@@ -326,41 +325,7 @@ cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
     MaxIntervalCount = 500
     
     # REGULAR CASE: ANY STRUCTURE, ALL MODES
-    # num = 0, +1, -1, +2, -2,..., +nmax, -nmax
-    
-    # zero mode first
-    num = 0
-    # area = 1
-    GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
-                             1, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 2
-    GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
-                             2, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 3
-    GNS11mat += np.exp(1j * theta) \
-            * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                     np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                             MaxIntervalCount,
-                             3, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 4
-    GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
-                             4, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 5
-    GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
-                             5, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # higher modes
-    for num in range(1, nmax + 1):
-        # +num
+    for num in range(nmin, nmax + 1):
         # area = 1
         GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
                                  1, kzImMax, 1.1 * k2, theta, k,
@@ -390,36 +355,6 @@ cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
                                  eps_out, eps_in, rc, num, r1, r2,
                                  p1, p2, z1, z2, i, j)
         
-        # -num
-        num = - num
-        # area = 1
-        GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
-                                 1, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 2
-        GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
-                                 2, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 3
-        GNS11mat += np.exp(1j * theta) \
-                * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                         np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                 MaxIntervalCount,
-                                 3, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 4
-        GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
-                                 4, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 5
-        GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
-                                 5, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
         ## Direct integration along Real axis
         #GNS11mat += complex_quad(iGNSFF11, -kzReMax, kzReMax, MaxIntervalCount,
         #                         k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
@@ -441,6 +376,7 @@ cdef double complex GF_pol_ij(double k, double eps_out, double eps_in,
 def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
            nmin, nmax, kzimax, tol=1e-8):
     '''Returns full tensor Gs in polar coordinates
+    It is assumed that rho1 = rho2
     
     Parameters
     ----------
@@ -455,7 +391,10 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
                                 rc, r1_vec_pol, r2_vec_pol,
                                 nmin, nmax, i, j, kzimax)
             if i != j:
-                Gs[j, i] = Gs[i, j]
+                if i == 0:
+                    Gs[j, i] = - Gs[i, j]
+                else:
+                    Gs[j, i] = Gs[i, j]
             
     return(Gs)
     
@@ -464,6 +403,7 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
 def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
           nmin, nmax, kzimax, tol=1e-8):
     '''Returns full tensor Gs in Cartesian coordinates
+    It is assumed that rho1 = rho2
     
     Parameters
     ----------
@@ -487,7 +427,10 @@ def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
                                 rc, r1p, r2p,
                                 nmin, nmax, i, j, kzimax)
             if i != j:
-                Gs[j, i] = Gs[i, j]
+                if i == 0:
+                    Gs[j, i] = - Gs[i, j]
+                else:
+                    Gs[j, i] = Gs[i, j]
 
     theta1 = r1p[1]
     theta2 = r2p[1]

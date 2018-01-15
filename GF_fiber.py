@@ -16,17 +16,6 @@ def delta(i, j):
         return(0)
 
 
-def complex_quad(func, a, b, limit=50, *args):
-    def RE(x):
-        return func(x, *args).real
-
-    def IM(x):
-        return func(x, *args).imag
-
-    return(quad(RE, a, b, limit=limit)[0] + 
-           1j * quad(IM, a, b, limit=limit)[0])
-
-
 def cart2pol(x, y):
     """
     Returns
@@ -279,6 +268,15 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
             condition for cutting the 'n' exists
 
     """
+#    def complex_quad(func, a, b, limit=50, *args):
+#        def RE(x):
+#            return func(x, *args).real
+#    
+#        def IM(x):
+#            return func(x, *args).imag
+#    
+#        return(quad(RE, a, b, limit=limit)[0] + 
+#               1j * quad(IM, a, b, limit=limit)[0])
 
     # cartesian to polar (projectures)
     r1, p1, z1 = r1_vec[0], r1_vec[1], r1_vec[2]
@@ -287,7 +285,7 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     k2 = np.sqrt(eps_in) * k
 
     kzReMax = kzimax * np.sqrt(eps_in)
-    kzImMax = k * 1e-4  # choose this quantity to be smaller for 
+    kzImMax = k * 1e-2  # choose this quantity to be smaller for 
                         # larger interatomic distances dz, since exp(1i k_z delta_z) 
     rel = 0.0
 
@@ -309,103 +307,102 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     Gnprev = 1e9  # previous, it sums from nmin to nmax-1; when nmax = 0 Gnprev = 0;
 
     theta = - np.arctan(kzImMax / (1.1 * k2))
-    MaxIntervalCount = 500
+    
+    MaxIntervalCount = 150
+    # k numpy arrays in log scale for integration
+    ks5 = np.geomspace(1.1 * k2, kzReMax, MaxIntervalCount*0.2)
+    ks5r = np.roll(ks5, 1)
+    dks5 = ks5 - ks5r
+    dks5 = np.roll(dks5, -1)
+    dks5 = np.delete(dks5, len(dks5) - 1)
+    ks5 = np.delete(ks5, len(ks5) - 1)
+    
+    ks2 = np.geomspace(0.0001 * kzImMax, kzImMax, MaxIntervalCount*0.2)
+    ks2r = np.roll(ks2, 1)
+    dks2 = ks2 - ks2r
+    dks2 = np.roll(dks2, -1)
+    dks2 = np.delete(dks2, len(dks2) - 1)
+    ks2 = np.delete(ks2, len(ks2) - 1)
+    
+#    ks32 = np.geomspace(1e-6 * k, np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
+#                        2* MaxIntervalCount)
+#    ks32r = np.roll(ks32, 1)
+#    dks32 = ks32 - ks32r
+#    dks32 = np.roll(dks32, -1)
+#    dks32 = np.delete(dks32, len(dks32) - 1)
+#    ks32 = np.delete(ks32, len(ks32) - 1)
+#    
+#    ks31 = - ks32
+#    dks31 = dks32
+    
+    ks3 = np.linspace(- np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)), 
+                      np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)), MaxIntervalCount)
+    dks3 = ks3[1] - ks3[0]
+    
+    ks4 = - ks2
+    dks4 = dks2
+    
+    ks1 = -ks5
+    dks1 = dks5
+    
     
     # REGULAR CASE: ANY STRUCTURE, ALL MODES
-    # num = 0, +1, -1, +2, -2,..., +nmax, -nmax
-    
-    # zero mode first
-    num = 0
-    # area = 1
-    GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
-                             1, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 2
-    GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
-                             2, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 3
-    GNS11mat += np.exp(1j * theta) \
-            * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                     np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                             MaxIntervalCount,
-                             3, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 4
-    GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
-                             4, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # area = 5
-    GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
-                             5, kzImMax, 1.1 * k2, theta, k,
-                             eps_out, eps_in, rc, num, r1, r2,
-                             p1, p2, z1, z2, i, j)
-    # higher modes
-    for num in range(1, nmax + 1):
-        # +num
+    for num in range(nmin, nmax + 1):
+        # direct integration using numpy array calculation
         # area = 1
-        GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
-                                 1, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+        y1 = iGNSFF11(ks1 - dks1 * 0.5, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
         # area = 2
-        GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
-                                 2, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+        y2 = iGNSFF11((ks2 - dks2 * 0.5)*1j - 1.1 * k2, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
         # area = 3
-        GNS11mat += np.exp(1j * theta) \
-                * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                         np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                 MaxIntervalCount,
-                                 3, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+        eexxpp = np.exp(1j * theta)
+        y3 = iGNSFF11((ks3 - dks3)*eexxpp, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j) + \
+             4 * iGNSFF11((ks3 - 0.5 * dks3)*eexxpp, 
+                          k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j) + \
+             iGNSFF11(ks3*eexxpp, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
         # area = 4
-        GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
-                                 4, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+        y4 = iGNSFF11((ks4 + dks4 * 0.5)*1j + 1.1 * k2, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
         # area = 5
-        GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
-                                 5, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+        y5 = iGNSFF11(ks5 + dks5 * 0.5, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+  
+        GNS11mat += np.dot(dks1, y1) + 1j * np.dot(dks2, y2) + \
+                    1j * np.dot(dks4, y4) + np.dot(dks5, y5) + \
+                    dks3/6 * np.sum(y3) * np.exp(1j * theta)
         
-        # -num
-        num = - num
-        # area = 1
-        GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
-                                 1, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 2
-        GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
-                                 2, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 3
-        GNS11mat += np.exp(1j * theta) \
-                * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                         np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
-                                 MaxIntervalCount,
-                                 3, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 4
-        GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
-                                 4, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
-        # area = 5
-        GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
-                                 5, kzImMax, 1.1 * k2, theta, k,
-                                 eps_out, eps_in, rc, num, r1, r2,
-                                 p1, p2, z1, z2, i, j)
+#        # area = 1
+#        GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
+#                                 1, kzImMax, 1.1 * k2, theta, k,
+#                                 eps_out, eps_in, rc, num, r1, r2,
+#                                 p1, p2, z1, z2, i, j)
+#        # area = 2
+#        GNS11mat += 1j * complex_quad(KOSTYL, 0.0, kzImMax, MaxIntervalCount,
+#                                 2, kzImMax, 1.1 * k2, theta, k,
+#                                 eps_out, eps_in, rc, num, r1, r2,
+#                                 p1, p2, z1, z2, i, j)
+#        # area = 3
+#        GNS11mat += np.exp(1j * theta) \
+#                * complex_quad(KOSTYL, - np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
+#                                         np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
+#                                 MaxIntervalCount,
+#                                 3, kzImMax, 1.1 * k2, theta, k,
+#                                 eps_out, eps_in, rc, num, r1, r2,
+#                                 p1, p2, z1, z2, i, j)
+#        # area = 4
+#        GNS11mat += 1j * complex_quad(KOSTYL, - kzImMax, 0.0, MaxIntervalCount,
+#                                 4, kzImMax, 1.1 * k2, theta, k,
+#                                 eps_out, eps_in, rc, num, r1, r2,
+#                                 p1, p2, z1, z2, i, j)
+#        # area = 5
+#        GNS11mat += complex_quad(KOSTYL, 1.1 * k2, kzReMax, MaxIntervalCount,
+#                                 5, kzImMax, 1.1 * k2, theta, k,
+#                                 eps_out, eps_in, rc, num, r1, r2,
+#                                 p1, p2, z1, z2, i, j)
+        
         ## Direct integration along Real axis
         #GNS11mat += complex_quad(iGNSFF11, -kzReMax, kzReMax, MaxIntervalCount,
         #                         k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
@@ -426,6 +423,7 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
            nmin, nmax, kzimax, tol=1e-8):
     '''Returns full tensor Gs in polar coordinates
+    It is assumed that rho1 = rho2
     
     Parameters
     ----------
@@ -440,7 +438,10 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
                                      rc, r1_vec_pol, r2_vec_pol,
                                      nmin, nmax, i, j, kzimax)
             if i != j:
-                Gs[j, i] = Gs[i, j]
+                if i == 0:
+                    Gs[j, i] = - Gs[i, j]
+                else:
+                    Gs[j, i] = Gs[i, j]
           
     return(Gs)
     
@@ -472,7 +473,10 @@ def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
                                 rc, r1p, r2p,
                                 nmin, nmax, i, j, kzimax)
             if i != j:
-                Gs[j, i] = Gs[i, j]
+                if i == 0:
+                    Gs[j, i] = - Gs[i, j]
+                else:
+                    Gs[j, i] = Gs[i, j]
 
     theta1 = r1p[1]
     theta2 = r2p[1]

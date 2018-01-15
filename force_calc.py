@@ -1,10 +1,13 @@
 import numpy as np
 import const
-import GF_fiber_cython as gff
+#import GF_fiber_cython as gff
+import GF_fiber as gff
 import GF_vacuum as gfv
 import Mie_scat_cyl
 import Mie_polarizability as mie_alpha
 import matplotlib.pyplot as plt
+from joblib import Parallel, delayed
+import time
 
 def cart2pol(r):
     rho = np.sqrt(r[0]**2 + r[1]**2)
@@ -72,6 +75,7 @@ def dipole_moment(i, r1, r2, R_particle, eps_particle,
                   nmin, nmax, kzimax,
                   E0_mod, nmin_sc, nmax_sc, case):
     """Calculates dipole moment
+    It is assumed that rho1 = rho2, theta1 = theta2 = 0
 
     Parameters
     ----------
@@ -115,13 +119,10 @@ def dipole_moment(i, r1, r2, R_particle, eps_particle,
 
     Gsij = gff.GF_pol(k, eps_out, eps_in, fiber_radius, ri, rj, nmin, nmax, kzimax)
 
-    Gsji = Gsij.transpose()
-    Gsji[0, 1] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               0, 1, kzimax)[0]
-    Gsji[1, 1] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               1, 1, kzimax)[0]
-    Gsji[1, 0] = gff.GF_pol_ij(k, eps_out, eps_in, fiber_radius, rj, ri, nmin, nmax,
-                               1, 0, kzimax)[0]
+    Gsji = Gsij
+    Gsji[0, 2] = - Gsij[0, 2]
+    Gsji[2, 0] = Gsij[0, 2]
+    
 
     Gij = G0ij + Gsij
     Gji = G0ji + Gsji
@@ -325,10 +326,11 @@ def VVV_q(wl, rho_c, epsilon_fiber, epsilon_m):
     print('lambda critical = %.1f' % (lam_c * 1e9))
 
 
-lam = 400*1e-9
-k = 2 * np.pi / lam
-R_particle = 150*1e-9
-fiber_radius = 150*1e-9
+k = 1.0
+lam = 2 * np.pi / k
+lammmm = 400.0  # [nm] 
+R_particle = 150.0 / lammmm * 2 * np.pi
+fiber_radius = 150.0 / lammmm * 2 * np.pi
 
 eps_particle = 2.5
 eps_out = 1.77
@@ -336,15 +338,15 @@ eps_in = 2.09
 
 nmin = 0
 nmax = 1
-kzimax = 15*k
+kzimax = 4*k
 
 
 P_laser = 100e-3  # [W]
 R_focus = 1e-6  # [m]
 Intensity = P_laser / (np.pi * R_focus**2)  # [W/m^2]
-E0_mod = np.sqrt(0.5 * const.Z0 * Intensity)  # [V/m]
+E0_mod_real = np.sqrt(0.5 * const.Z0 * Intensity)  # [V/m]
 
-# E0_mod *= lam / (2 * np.pi) # [V], [k] = [1]
+E0_mod = 1.0
 
 nmin_sc = -60
 nmax_sc = 60
@@ -353,48 +355,68 @@ r1 = np.array([fiber_radius + R_particle, 0, 0])
 r2 = np.array([fiber_radius + R_particle, 0, 2*R_particle])
 
 
-z_space = np.linspace(2 * R_particle, 8 * lam, 70)
-Fz = np.zeros(len(z_space))
+z_space = np.linspace(2 * R_particle, 8 * lam, 100)
+r2_space = np.zeros([len(z_space), 3])
 for i, zz in enumerate(z_space):
-    print('step = ', i)
-    r2 = np.array([fiber_radius + R_particle, 0, zz])
-    Fz[i] = force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
-              fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+    r2_space[i] = np.array([fiber_radius + R_particle, 0, zz])
     
-np.save('data_Fz_onemode_sc_TE', (z_space, Fz))
+Fz = np.zeros(len(z_space))
 
-#z_space, Fz_1sc = np.load('Fz_onemode_sc.npy')
-#z_space, Fz_1wsc = np.load('Fz_onemode_without_sc.npy')
+start_time = time.time()
+Fz = Parallel(n_jobs=4)(delayed(force_12)(2, r1, r2_space[i], R_particle, eps_particle, k, 
+                                          eps_out, eps_in, fiber_radius, nmin, nmax, kzimax, 
+                                          E0_mod, nmin_sc, nmax_sc, case) for i in range(len(z_space)))
+Fz = np.asarray(Fz)
+Fz *= const.epsilon00
+ex_time = time.time() - start_time
+print('Exucution time: %.1f' % ex_time)
+
+#for i, zz in enumerate(z_space):
+#    print('step = ', i)
+#    r2 = np.array([fiber_radius + R_particle, 0, zz])
+#    Fz[i] = force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
+#              fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+    
+np.save('test_dimless', (z_space, Fz))
+
+
+
+z_space, Fz = np.load('test.npy')
+z_space2, Fz2 = np.load('test_dimless.npy')
+
 #z_space, Fz_3sc = np.load('Fz_manymodes_sc.npy')
-#plt.plot(z_space/lam, Fz_1sc, '--', label='single mode + sc')
-#plt.plot(z_space/lam, Fz_1wsc, ':', label='single mode')
+plt.plot(z_space2/lam, Fz, '--', color='gray', label='straight forward')
+#plt.plot(z_space2/lam, Fz2, ':', label='dimentionless')
+#plt.plot(z_space2/lam, E0_mod_real * Fz2, ':', label='dimentionless E')
+#plt.plot(z_space2/lam, E0_mod_real**2 * Fz2, ':', label='dimentionless E**2')
+plt.plot(z_space2/lam, const.epsilon00 * E0_mod_real**2 * Fz2, ':', label='dimentionless eps0*E**2')
 #plt.plot(z_space/lam, Fz_3sc, 'k', label='many modes + sc')
-#plt.legend(shadow=True, fontsize='x-large')
-#plt.xlabel(r'$\Delta z / \lambda$')
-#plt.ylabel(r'$F_z$, N')
+plt.legend(shadow=True, fontsize='x-large')
+plt.xlabel(r'$\Delta z / \lambda$')
+plt.ylabel(r'$F_z$, N')
 #plt.grid()
-#plt.show()
-
-Rf_space = np.linspace(500, 100, 9) * 1e-9
-wl_space = np.linspace(200, 1200, 150) * 1e-9
-Vcr = 2.405
-Vcr2 = 2.55
-Vcr3 = 3.6
-
-
-for Rf in Rf_space:
-    V = 2*np.pi/wl_space * Rf * np.sqrt(eps_in - eps_out)
-    plt.plot(wl_space * 1e9, V, label="Rf = %.0f nm"% (Rf*1e9))
-    
-plt.plot(wl_space * 1e9, Vcr * np.ones(len(wl_space)), 'k--')
-plt.plot(wl_space * 1e9, Vcr2 * np.ones(len(wl_space)), 'k--', color='gray')
-plt.plot(wl_space * 1e9, Vcr3 * np.ones(len(wl_space)), 'k--', color='gray')
-plt.legend()
-plt.title(r'$\varepsilon_f$ = %.2f, $\varepsilon_m$ = %.2f' % (eps_in, eps_out), loc='right')
-plt.xlabel(r'$\lambda$, nm')
-plt.ylabel(r'$V$')
 plt.show()
 
+
+
+#Rf_space = np.linspace(500, 100, 9) * 1e-9
+#wl_space = np.linspace(200, 1200, 150) * 1e-9
+#Vcr = 2.405
+#Vcr2 = 2.55
+#Vcr3 = 3.6
+
+#for Rf in Rf_space:
+#    V = 2*np.pi/wl_space * Rf * np.sqrt(eps_in - eps_out)
+#    plt.plot(wl_space * 1e9, V, label="Rf = %.0f nm"% (Rf*1e9))
+    
+#plt.plot(wl_space * 1e9, Vcr * np.ones(len(wl_space)), 'k--')
+#plt.plot(wl_space * 1e9, Vcr2 * np.ones(len(wl_space)), 'k--', color='gray')
+#plt.plot(wl_space * 1e9, Vcr3 * np.ones(len(wl_space)), 'k--', color='gray')
+#plt.legend()
+#plt.title(r'$\varepsilon_f$ = %.2f, $\varepsilon_m$ = %.2f' % (eps_in, eps_out), loc='right')
+#plt.xlabel(r'$\lambda$, nm')
+#plt.ylabel(r'$V$')
+#plt.show()
 
 
 

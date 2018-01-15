@@ -1,23 +1,26 @@
 import numpy as np 
-import GF_fiber
 
+def f(x):
+    return(np.exp(-x))
 
-k = 1
-kzimax = 10.
-eps_in = 3.
-eps_out = 1.
-nmax = 10
-nmin = -10
-r1_vec = np.array([0.55, 1, 0]) 
-r2_vec = np.array([-0.55, 0, 1])
-rc = 0.5
+a = 3
+b = 2000
+nmax = 200
+    
+I = np.exp(-a) - np.exp(-b)
 
-G = np.zeros([3, 3], dtype=complex)
-for i in range(3):
-    for j in range(3):
-        G[i, j] = GF_fiber.GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax, i, j, kzimax)[0]
+x = np.linspace(a, b, nmax)
+dx = x[1] - x[0]
 
-#print(G2.real)
-#print(G2.imag)
+I1 = dx * np.sum(f(x + dx/2))
+print('lin = %.2e' % (np.abs(I1 - I) / I))
 
+x = np.geomspace(a, b, nmax)
+xr = np.roll(x, 1)
+dx = x - xr 
+dx = np.roll(dx, -1)
+dx = np.delete(dx, len(dx) - 1)
+x = np.delete(x, len(x) - 1)
 
+I2 = np.dot(dx, f(x + dx/2))
+print('log = %.2e' % (np.abs(I2 - I) / I))

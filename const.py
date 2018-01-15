@@ -21,8 +21,8 @@ mu0 = 4 * np.pi * 1e-7  # [H / m]
 # in order to increase accuracy I put k = 1 and epsilon0 = 1
 # but in final expresion for force I need to multiply by real value of epsilon0
 # [F] = [p] [nabla] [E] = ... = [epsilon0] [V^2]
-epsilon0 = 1. / (mu0 * c**2)  # [F/m]
-epsilon00 = 1 / (mu0 * c**2)  # [F/m]
+epsilon0 = 1.0  # [F/m]
+epsilon00 = 1.0 / (mu0 * c**2)  # [F/m]
 
 Z0 = np.sqrt(mu0 / epsilon0)
 
