@@ -22,6 +22,10 @@ def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
     Case II: a Transverse Electric (TE) mode.
         The electric field is perpendicular 
         to the cylinder axis.
+        
+    see theory from Craig F Bohren & Donald R Huffman
+    Absorbtion and scattering of light by Small Particles
+    Ch 8 par 4
 
     Only for normal incident light (zeta = pi/2) 
     which simplifies to 
@@ -74,14 +78,48 @@ def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
         if case == 1:
             b_nI = (Jn_mx * Jnp_x - m * Jnp_mx * Jn_x) / \
                    (Jn_mx * H1np - m * Jnp_mx * H1n)
-            Es -= np.exp(1j * (n * phi - np.pi / 2)) * \
+            Es -= np.exp(1j * n * (phi - np.pi / 2)) * \
                 b_nI / k * np.array([0, 0, l * Zn])
         # Case II
         if case == 2:
             Znp = sp.h1vp(n, rho)
             a_nII = (m * Jnp_x * Jn_mx - Jn_x * Jnp_mx) / \
                     (m * Jn_mx * H1np - Jnp_mx * H1n)
-            Es += np.exp(1j * (n * phi - np.pi / 2)) * \
+            Es += np.exp(1j * n * (phi - np.pi / 2)) * \
                 a_nII * np.array([1j * n * Zn / rho, -Znp, 0])
 
     return(Es * E0)
+    
+def Es2(r, phi, z, k, R, m, E0, nmin, nmax, case):
+    l = k
+    # h = 0
+    rho = r * l
+    x = k * R
+    mx = m * x
+
+    Esrho, Esphi, Esz = 0j, 0j, 0j
+    for n in range(nmin, nmax + 1):
+        Zn = sp.hankel1(n, rho)
+
+        Jn_x = sp.jv(n, x)
+        Jn_mx = sp.jv(n, mx)
+        Jnp_x = sp.jvp(n, x)
+        Jnp_mx = sp.jvp(n, mx)
+        H1np = sp.h1vp(n, x)
+        H1n = sp.hankel1(n, x)
+        # Case I
+        if case == 1:
+            b_nI = (Jn_mx * Jnp_x - m * Jnp_mx * Jn_x) / \
+                   (Jn_mx * H1np - m * Jnp_mx * H1n)
+            preexp = np.exp(1j * n * (phi - np.pi / 2)) * b_nI / k
+            Esz -= preexp * l * Zn
+        # Case II
+        if case == 2:
+            Znp = sp.h1vp(n, rho)
+            a_nII = (m * Jnp_x * Jn_mx - Jn_x * Jnp_mx) / \
+                    (m * Jn_mx * H1np - Jnp_mx * H1n)
+            preexp = np.exp(1j * n * (phi - np.pi / 2)) * a_nII
+            Esrho += preexp * 1j * n * Zn / rho
+            Esphi -= preexp * Znp
+
+    return(E0 * Esrho, E0 * Esphi, E0 * Esz)
