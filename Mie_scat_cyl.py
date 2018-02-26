@@ -7,12 +7,13 @@ Last change: 07.11.2017
 
 import numpy as np
 import scipy.special as sp
+from numba import jit
 
 # see theory from Craig F Bohren & Donald R Huffman
 # Absorbtion and scattering of light by Small Particles
 # Ch 8 par 4
 
-
+@jit
 def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
     """Scattered plane wave el-field from an infinite cylinder 
        in cylindrical coodinates 
@@ -58,9 +59,8 @@ def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
             in cylindrical coordinates
     
     """
-    l = k
     # h = 0
-    rho = r * l
+    rho = r * k
     x = k * R
     mx = m * x
 
@@ -79,7 +79,7 @@ def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
             b_nI = (Jn_mx * Jnp_x - m * Jnp_mx * Jn_x) / \
                    (Jn_mx * H1np - m * Jnp_mx * H1n)
             Es -= np.exp(1j * n * (phi - np.pi / 2)) * \
-                b_nI / k * np.array([0, 0, l * Zn])
+                b_nI / k * np.array([0, 0, k * Zn])
         # Case II
         if case == 2:
             Znp = sp.h1vp(n, rho)
@@ -90,10 +90,11 @@ def Es(r, phi, z, k, R, m, E0, nmin, nmax, case):
 
     return(Es * E0)
     
+    
+@jit
 def Es2(r, phi, z, k, R, m, E0, nmin, nmax, case):
-    l = k
     # h = 0
-    rho = r * l
+    rho = r * k
     x = k * R
     mx = m * x
 
@@ -112,13 +113,13 @@ def Es2(r, phi, z, k, R, m, E0, nmin, nmax, case):
             b_nI = (Jn_mx * Jnp_x - m * Jnp_mx * Jn_x) / \
                    (Jn_mx * H1np - m * Jnp_mx * H1n)
             preexp = np.exp(1j * n * (phi - np.pi / 2)) * b_nI / k
-            Esz -= preexp * l * Zn
+            Esz -= preexp * k * Zn
         # Case II
         if case == 2:
             Znp = sp.h1vp(n, rho)
             a_nII = (m * Jnp_x * Jn_mx - Jn_x * Jnp_mx) / \
                     (m * Jn_mx * H1np - Jnp_mx * H1n)
-            preexp = np.exp(1j * n * (phi - np.pi / 2)) * a_nII
+            preexp = np.exp(1j * n * (-phi - np.pi / 2)) * a_nII
             Esrho += preexp * 1j * n * Zn / rho
             Esphi -= preexp * Znp
 

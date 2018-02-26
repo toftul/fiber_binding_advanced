@@ -12,16 +12,16 @@ import time
 
 pi = np.pi
 
-k0 = 1.0
+k0 = 1
 eps1 = 1.0
 eps2 = 2.09
-rc = 1 / 3 * 2 * pi
+rc = 1 / 3 * 2 * pi /k0
 # corresponds to a pic in Zakowicz
-drho = 1 / 6 * 2 * pi
-zr = 0.0 * 2 * pi
-zmin = 0.1 * 2 * pi
-zmax = 6.0 * 2 * pi
-zlen = 100
+drho = 1 / 6 * 2 * pi /k0
+zr = 0.0 * 2 * pi /k0
+zmin = 0.1 * 2 * pi /k0
+zmax = 15.0 * 2 * pi /k0
+zlen = 150
 zvec = np.linspace(zmin, zmax, zlen)
 V = k0 * rc * np.sqrt(eps2 - eps1)
 print('V = ', V)
@@ -44,7 +44,7 @@ for j in range(zlen):
     print('r: %.2f' % (j / zlen))
     r1_vec = np.array([rc + drho, p_d, zr])
     r2_vec = np.array([rc + drho, p_d, zvec[j]])
-    i_int, j_int = 2, 2
+    i_int, j_int = 1, 1
     g_sc[j] = gff.GF_pol_ij(k0, eps1, eps2, rc, r1_vec, r2_vec,
                             nmin, nmax, i_int, j_int, kzimax)
 

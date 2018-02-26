@@ -85,19 +85,21 @@ def polarizability_dipole(a, epsilon_p, epsilon_m):
     return(4 * np.pi * const.epsilon0 * a**3 * 
            (epsilon_p - epsilon_m) / (epsilon_p + 2 * epsilon_m))
 
-'''    
-lam_space = np.linspace(200, 1200) * 1e-9
-k = 2 * np.pi / lam_space
-a = 100e-9
-eps_p = 2.2
-eps_m = 1.0
 
-alpa_mie = polarizability(k, a, eps_p, eps_m)
-alpa_dipole = polarizability_dipole(k, a, eps_p, eps_m)
+#import matplotlib.pyplot as plt
+#lam_space = np.linspace(200, 1200, 400) * 1e-9
+#k = 2 * np.pi / lam_space
+#a = 100e-9
+#eps_p = 12.0
+#eps_m = 1.0
+#
+#alpa_mie = polarizability(k, a, eps_p, eps_m)
+#alpa_dipole = polarizability_dipole(a, eps_p, eps_m)
+#
+#plt.plot(lam_space * 1e9, alpa_mie.real, label='mie RE')
+#plt.plot(lam_space * 1e9, alpa_dipole.real * k/k, label='dipole RE')
+#plt.plot(lam_space * 1e9, alpa_mie.imag, '--', label='mie IM')
+#plt.plot(lam_space * 1e9, alpa_dipole.imag * k/k, '--', label='dipole IM')
+#plt.legend()
+#plt.show()
 
-plt.plot(lam_space * 1e9, alpa_mie.real)
-plt.plot(lam_space * 1e9, alpa_mie.imag)
-plt.plot(lam_space * 1e9, alpa_dipole.real * k/k)
-plt.plot(lam_space * 1e9, alpa_dipole.imag * k/k)
-plt.show()
-'''

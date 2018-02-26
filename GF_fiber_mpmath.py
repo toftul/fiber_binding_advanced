@@ -5,18 +5,18 @@ Last change: 08.11.2017
 """
 
 import numpy as np
+import 
 import scipy.special as sp
-from scipy.integrate import quad, trapz
-from numba import jit
+from scipy.integrate import quad
 
-@jit
+
 def delta(i, j):
     if i == j:
         return(1)
     else:
         return(0)
 
-@jit
+
 def cart2pol(x, y):
     """
     Returns
@@ -27,7 +27,7 @@ def cart2pol(x, y):
     phi = np.arctan2(y, x)
     return(rho, phi)
 
-@jit
+
 def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     """Fiber Green's function integrand
         Calculates the integrand of the scattered part of the Green's tensor of the fiber;
@@ -186,7 +186,7 @@ def iGNSFF11(x, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
 
     return iG
 
-@jit
+
 def KOSTYL(t, area, im_max, re_max, theta,
            k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j):
     # contour parametrization
@@ -219,7 +219,7 @@ def KOSTYL(t, area, im_max, re_max, theta,
 
     return(iGNSFF11(z, k, eps_out, eps_in, rc, n, rr, rs, pr, ps, zr, zs, i, j))
 
-@jit
+
 def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
              i, j, kzimax, tol=1e-8):
     """Fiber Green's function
@@ -309,21 +309,21 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 
     theta = - np.arctan(kzImMax / (1.1 * k2))
     
-    MaxIntervalCount = 300
+    MaxIntervalCount = 150
     # k numpy arrays in log scale for integration
     ks5 = np.geomspace(1.1 * k2, kzReMax, MaxIntervalCount*0.2)
-#    ks5r = np.roll(ks5, 1)
-#    dks5 = ks5 - ks5r
-#    dks5 = np.roll(dks5, -1)
-#    dks5 = np.delete(dks5, len(dks5) - 1)
-#    ks5 = np.delete(ks5, len(ks5) - 1)
+    ks5r = np.roll(ks5, 1)
+    dks5 = ks5 - ks5r
+    dks5 = np.roll(dks5, -1)
+    dks5 = np.delete(dks5, len(dks5) - 1)
+    ks5 = np.delete(ks5, len(ks5) - 1)
     
     ks2 = np.geomspace(0.0001 * kzImMax, kzImMax, MaxIntervalCount*0.2)
-#    ks2r = np.roll(ks2, 1)
-#    dks2 = ks2 - ks2r
-#    dks2 = np.roll(dks2, -1)
-#    dks2 = np.delete(dks2, len(dks2) - 1)
-#    ks2 = np.delete(ks2, len(ks2) - 1)
+    ks2r = np.roll(ks2, 1)
+    dks2 = ks2 - ks2r
+    dks2 = np.roll(dks2, -1)
+    dks2 = np.delete(dks2, len(dks2) - 1)
+    ks2 = np.delete(ks2, len(ks2) - 1)
     
 #    ks32 = np.geomspace(1e-6 * k, np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)),
 #                        2* MaxIntervalCount)
@@ -338,27 +338,42 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
     
     ks3 = np.linspace(- np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)), 
                       np.sqrt(kzImMax*kzImMax + (1.1 * k2)*(1.1 * k2)), MaxIntervalCount)
-#    dks3 = ks3[1] - ks3[0]
+    dks3 = ks3[1] - ks3[0]
     
     ks4 = - ks2
-#    dks4 = dks2
+    dks4 = dks2
     
     ks1 = -ks5
-#    dks1 = dks5
-    
-    ks_total = np.append(ks1, ks2 * 1j - 1.1 * k2)
-    ks_total = np.append(ks_total, ks3 * np.exp(1j * theta))
-    ks_total = np.append(ks_total, ks4 * 1j + 1.1 * k2)
-    ks_total = np.append(ks_total, ks5)
-    
+    dks1 = dks5
     
     
     # REGULAR CASE: ANY STRUCTURE, ALL MODES
     for num in range(nmin, nmax + 1):
-        # direct integration using trapz rule
-        y = iGNSFF11(ks_total, 
-                     k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
-        GNS11mat += trapz(y, ks_total)
+        # direct integration using numpy array calculation
+        # area = 1
+        y1 = iGNSFF11(ks1 - dks1 * 0.5, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+        # area = 2
+        y2 = iGNSFF11((ks2 - dks2 * 0.5)*1j - 1.1 * k2, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+        # area = 3
+        eexxpp = np.exp(1j * theta)
+        y3 = iGNSFF11((ks3 - dks3)*eexxpp, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j) + \
+             4 * iGNSFF11((ks3 - 0.5 * dks3)*eexxpp, 
+                          k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j) + \
+             iGNSFF11(ks3*eexxpp, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+        # area = 4
+        y4 = iGNSFF11((ks4 + dks4 * 0.5)*1j + 1.1 * k2, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+        # area = 5
+        y5 = iGNSFF11(ks5 + dks5 * 0.5, 
+                      k, eps_out, eps_in, rc, num, r1, r2, p1, p2, z1, z2, i, j)
+  
+        GNS11mat += np.dot(dks1, y1) + 1j * np.dot(dks2, y2) + \
+                    1j * np.dot(dks4, y4) + np.dot(dks5, y5) + \
+                    dks3/6 * np.sum(y3) * np.exp(1j * theta)
         
 #        # area = 1
 #        GNS11mat += complex_quad(KOSTYL, -kzReMax, -1.1 * k2, MaxIntervalCount,
@@ -406,7 +421,6 @@ def GF_pol_ij(k, eps_out, eps_in, rc, r1_vec, r2_vec, nmin, nmax,
 
     return GNS11mat
 
-@jit
 def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
            nmin, nmax, kzimax, tol=1e-8):
     '''Returns full tensor Gs in polar coordinates
@@ -434,7 +448,6 @@ def GF_pol(k, eps_out, eps_in, rc, r1_vec_pol, r2_vec_pol,
     
 
 # not yet done!
-@jit
 def GF_car(k, eps_out, eps_in, rc, r1_vec, r2_vec,
           nmin, nmax, kzimax, tol=1e-8):
     '''Returns full tensor Gs in Cartesian coordinates

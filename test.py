@@ -1,26 +1,16 @@
-import numpy as np 
+# -*- coding: utf-8 -*-
 
-def f(x):
-    return(np.exp(-x))
+import numpy as np
+import GF_vacuum as gfv
 
-a = 3
-b = 2000
-nmax = 200
-    
-I = np.exp(-a) - np.exp(-b)
+k = 1
+R = np.array([1, 2, 3]) * 2*np.pi / k
 
-x = np.linspace(a, b, nmax)
-dx = x[1] - x[0]
+G1 = gfv.GF_vac(R, k)
 
-I1 = dx * np.sum(f(x + dx/2))
-print('lin = %.2e' % (np.abs(I1 - I) / I))
 
-x = np.geomspace(a, b, nmax)
-xr = np.roll(x, 1)
-dx = x - xr 
-dx = np.roll(dx, -1)
-dx = np.delete(dx, len(dx) - 1)
-x = np.delete(x, len(x) - 1)
+k = 2*np.pi/550e-9
+R = np.array([1, 2, 3]) * 2*np.pi / k
 
-I2 = np.dot(dx, f(x + dx/2))
-print('log = %.2e' % (np.abs(I2 - I) / I))
+G2 = gfv.GF_vac(R, k)
+
