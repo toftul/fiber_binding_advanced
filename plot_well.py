@@ -11,12 +11,15 @@ import const
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib
+#from matplotlib import gridspec
+#from basic_units import radians
 from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
+#from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from scipy.interpolate import interp2d
-from scipy.interpolate import RectBivariateSpline
+#from scipy.interpolate import RectBivariateSpline
+#plt.style.use('ggplot')
 
-z_space, phi_space, Fz, Fphi = np.load('npy_data/F_well_data_sm.npy')
+z_space, phi_space, Fz, Fphi = np.load('npy_data/F_well_data_mm.npy')
 z_eq = 3.44 * 2*np.pi
 phi_eq = 0.0
 
@@ -45,21 +48,27 @@ for i, z_i in enumerate(z_space):
         U_data[i, j] = U_(phi_j, z_i)
         
 U_data -= np.min(U_data) 
-U_data /= np.max(U_data)
-U_data += 0.5
-U_data *= 2
+kT = const.k_B * 300 * 1e9
+U_data /= kT
+U_data += 15
+#U_data /= np.max(U_data)
+#U_data += 0.5
+#U_data *= 2
 
 # simple plot
-#fig = plt.figure()
-#ax = fig.gca(projection='3d')
-#ax.set_ylabel('Distance to the first particle, $\Delta z / \lambda$')
-#PHI = phi_space
-#Z = z_space
-#PHI, Z = np.meshgrid(PHI, Z)
-#surf1 = ax.plot_surface(PHI, Z/(2*np.pi), U_data, 
-#                        cmap=cm.coolwarm, rstride=1, cstride=1, linewidth=0, antialiased=False, alpha=0.9)
-#plt.show()
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+ax.set_ylabel('Distance to the first particle, $\Delta z / \lambda$')
+ax.set_xlabel('Twisting angle, $\phi$, rad')
+ax.set_zlabel(r'Trapping potential, $U/kT$')
+PHI = phi_space
+Z = z_space
+PHI, Z = np.meshgrid(PHI, Z)
+surf1 = ax.plot_surface(PHI, Z/(2*np.pi), U_data, 
+                        cmap=cm.coolwarm, rstride=1, cstride=1, linewidth=0, antialiased=False, alpha=0.9)
+plt.show()
 
+# %%
 
 x_space = np.zeros([len(z_space), len(phi_space)])
 y_space = np.zeros([len(z_space), len(phi_space)])
@@ -103,6 +112,7 @@ m.set_array([])
 fcolors = m.to_rgba(color_dimension)
 
 # Plot the surface.
+x_space = - x_space
 #surf = ax.plot_surface(PHI, Z/(2*np.pi), U_data, cmap=cm.coolwarm, linewidth=0, antialiased=False, alpha=0.5)
 surf1 = ax.plot_surface(y_space, zz_space/(2*np.pi), x_space, 
                        facecolors=fcolors, rstride=1, cstride=1, linewidth=0, antialiased=False, alpha=0.5)
@@ -112,7 +122,7 @@ cset = ax.contour(y_space, zz_space/(2*np.pi), x_space, zdir='x',
 cset = ax.contour(y_space, zz_space/(2*np.pi), x_space, zdir='x', 
                   offset=0, facecolors=fcolors, alpha=0.8, levels=[0])
 # phi dependence
-levels_pos = np.array([1.7, 4.8])
+levels_pos = np.array([3.3, 5.5])
 levels_colors = ['m', 'r']
 for i, lev in enumerate(levels_pos):
     cset = ax.contour(y_space, zz_space/(2*np.pi), x_space, zdir='y', 
@@ -123,14 +133,14 @@ surf2 = ax.plot_surface(y_cyl, zz_cyl/(2*np.pi), x_cyl, linewidth=0, antialiased
 
 # add polar grid
 y0 = np.min(zz_space)/(2*np.pi) - 0.3
-rmod = 3
+rmod = 110
 for theta in np.arange(-90, 91, 15)*np.pi/180:
     arrows_x = [0, np.sin(theta)*rmod]
     arrows_y = [y0, y0]
     arrows_z = [0, np.cos(theta)*rmod]
     ax.plot(arrows_x, arrows_y, arrows_z, color = 'gray', linewidth=0.5)
 
-for rmod in np.arange(0.5, 3.1, 0.5):
+for rmod in np.arange(0.5, rmod+0.1, int(rmod/8)):
     theta = - np.pi/2
     arrows_x = [np.sin(theta)*rmod]
     arrows_y = [y0]
@@ -162,11 +172,11 @@ ax.set_zticks([], minor=False)
 ax.zaxis.grid(True, which='minor')
 
 # add text
-ax.text(-np.max(U_data), 3.4, 2.8, r'$U(\phi=0, \Delta z)$')
-ax.text(2.5, y0, 3.2, r'$U(\phi, \Delta z=$const)')
+ax.text(-np.max(U_data), np.max(U_data)/2, np.max(U_data)*.4, r'$U(\phi=0, \Delta z)$')
+ax.text(np.max(U_data)*0.8, y0*0.7, np.max(U_data)*1.1, r'$U(\phi, \Delta z=$const)')
 
 # Add a color bar which maps values to colors.
-cbar = fig.colorbar(m, shrink=0.6, aspect=15, ticks=[1, 3])
+cbar = fig.colorbar(m, shrink=0.6, aspect=15, ticks=[np.min(U_data), np.max(U_data)])
 cbar.ax.set_yticklabels([r'$U_{\min}$', r'$U_{\max}$'])
 
 ax.set_title(r'Trapping potential, $U(\rho = $const$, \phi, \Delta z)$')
