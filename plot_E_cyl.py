@@ -60,7 +60,7 @@ def E(x, y, R):
     cut = cut * np.ones(len(cut))
     return(Ex * cut, Ey * cut, Ez * cut)
 
-NDOTS = 150
+NDOTS = 300
 
 box_mm = 30.0
 box_sm = box_mm #* Rff_sm / Rff_mm
@@ -100,33 +100,55 @@ zmod_mm = EEE[0].conjugate() * EEE[0] + \
 # %% 
 # plotting part
 
-fig = plt.figure(figsize=(12, 4)) 
-fig.tight_layout()
+NDOTS = 40
 
-plt.subplot(121)
-plt.contourf(x_sm/(2*np.pi), y_sm/(2*np.pi), zmod_sm, NDOTS)    
-plt.title('$kR =$ %.1f, $\sqrt{\epsilon_f / \epsilon_m} =$ %.1f' % (k*R_sm, m), fontsize=14)   
-plt.xlabel('$x/\lambda$', fontsize=14)
-plt.ylabel('$y/\lambda$', fontsize=14)             
+def get_circle(x0, y0, R):
+    phi = np.linspace(-np.pi, np.pi, 200)
+    x = x0 + R * np.cos(phi)
+    y = y0 + R * np.sin(phi)
+    return x, y
 
-bar = plt.colorbar(orientation='vertical')
-bar.set_label('Amplitude of the total field, $|E_{sc}|/E_0$', fontsize=14)
+#fig = plt.figure(figsize=(10, 5)) 
+#fig.tight_layout()
 
-plt.plot(- (Rff_sm + R_particle)/lamm, 0, 'ro')
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(8.5, 4.7))
+#fig.tight_layout()
+
+ax = axes.flat[0]
+
+im = ax.contourf(y_sm/(2*np.pi), -x_sm/(2*np.pi), zmod_sm, NDOTS, cmap='jet')    
+#ax.set_title(r'$kR =$ %.1f, $\sqrt{\epsilon_f / \epsilon_m} =$ %.1f' % (k*R_sm, m), fontsize=14)   
+ax.set_xlabel('$x/\lambda$', fontsize=14)
+ax.set_ylabel('$y/\lambda$', fontsize=14)             
+
+#bar = plt.colorbar(orientation='vertical')
+#bar.set_label('Amplitude of the total field, $|E_{sc}|/E_0$', fontsize=14)
+im.set_clim(0, np.max(zmod_mm).real)
+
+xCirc, yCirc = get_circle(0, (Rff_sm + R_particle)/lamm, R_particle/lamm)
+ax.plot(xCirc, yCirc, 'k--')
 
 
-plt.subplot(122)
-plt.contourf(x_mm/(2*np.pi), y_mm/(2*np.pi), zmod_mm, NDOTS)    
-plt.title('$kR =$ %.1f, $\sqrt{\epsilon_f / \epsilon_m} =$ %.1f' % (k*R_mm, m), fontsize=14)   
-plt.xlabel('$x/\lambda$', fontsize=14)
-plt.ylabel('$y/\lambda$', fontsize=14)             
+ax = axes.flat[1]
 
-bar = plt.colorbar(orientation='vertical')
-bar.set_label('Amplitude of the total field, $|E_{sc}|/E_0$', fontsize=14)
+im = ax.contourf(y_mm/(2*np.pi), -x_mm/(2*np.pi), zmod_mm, NDOTS, cmap='jet')    
+#ax.set_title('$kR =$ %.1f, $\sqrt{\epsilon_f / \epsilon_m} =$ %.1f' % (k*R_mm, m), fontsize=14)   
+ax.set_xlabel('$x/\lambda$', fontsize=14)
+ax.set_ylabel('$y/\lambda$', fontsize=14)             
 
-plt.plot(- (Rff_mm + R_particle)/lamm, 0, 'ro')
+#bar = plt.colorbar(orientation='horizontal')
+#bar.set_label('Amplitude of the total field, $|E_{sc}|/E_0$', fontsize=14)
 
+xCirc, yCirc = get_circle(0, (Rff_mm + R_particle)/lamm, R_particle/lamm)
+ax.plot(xCirc, yCirc, 'k--')
 
-plt.absolute_importsubplots_adjust(left=None, bottom=None, right=None, top=10000,
-                wspace=100, hspace=100)
+fig.subplots_adjust(bottom=0.27)
+
+cbar_ax = fig.add_axes([0.2, 0.1, 0.59, 0.03])
+CB = fig.colorbar(im, cax=cbar_ax, orientation='horizontal')
+CB.set_ticks(np.array([0, 1, 4, 7]))
+CB.set_ticklabels(['0', '1', '4', '7'])
+CB.set_label('Amplitude of the total electric field, $|\mathbf{E}_{sc} + \mathbf{E}_0|/E_0$', fontsize=14)
+
+plt.savefig('results/Esc.pdf')
 plt.show()

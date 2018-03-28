@@ -13,7 +13,7 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from joblib import Parallel, delayed
 import time
 
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
 
 # %%
 # FUNCTIONS
@@ -350,7 +350,7 @@ def VVV_q(wl, rho_c, epsilon_fiber, epsilon_m):
 
 # sm -- single mode regime
 # mm -- multy mode regime
-regime = 'sm'
+regime = 'mm'
 
 k = 1.0
 lam = 2 * np.pi / k
@@ -396,18 +396,18 @@ r1 = np.array([(fiber_radius + R_particle + 0*lam), np.pi, 0])
 r2 = np.array([(fiber_radius + R_particle + 0*lam), np.pi, 3.95 * lam])
 
 if regime == 'sm':
-   z_eq_space = np.array([3.95, 7.0]) * lam
-   z_eq_color_space = ['g', 'r']
+   z_eq_space = np.array([3.95, 7.0, 9.15]) * lam
+   z_eq_color_space = ['g', 'r', 'k']
 elif regime == 'mm':
-   z_eq_space = np.array([3.95, 7.0]) * lam
-   z_eq_color_space = ['g', 'r']
+   z_eq_space = np.array([3.95, 7.0, 9.15]) * lam
+   z_eq_color_space = ['g', 'r', 'k']
 else:
    z_eq_space = np.array([3.95]) * lam
    z_eq_color_space = ['g']
 
 # Creating grid for calculations
-z_space = np.linspace(2 * R_particle, 12 * lam, 40)
-phi_space = np.linspace(-np.pi/3, np.pi/3, 20) + np.pi
+z_space = np.linspace(2 * R_particle, 12 * lam, 150)
+phi_space = np.linspace(-np.pi/2, np.pi/2, 60) + np.pi
 
 r2_space = np.zeros([len(z_space), 3])
 for i, zz in enumerate(z_space):
@@ -476,7 +476,8 @@ Fphi_plt.set_ylabel(r'Optical force, $F_{\phi}$, pN')
 Fphi_plt.legend()
 Fphi_plt.grid(zorder=1)
 
-plt.show()
+plt.savefig("Fz_Fphi_mm_lam530_a120(na stile).pdf", bbox_inches='tight')
+#plt.show()
 
 # %%
 

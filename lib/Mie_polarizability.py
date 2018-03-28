@@ -108,29 +108,30 @@ def polarizability_dipole_rad_corr(k, a, epsilon_p, epsilon_m):
     return(alpha0 / (1 - 1j * alpha0 * k*k*k/(6*np.pi)))
 
 
-#import matplotlib.pyplot as plt
-#plt.style.use('ggplot')
-#lam_space = np.linspace(200, 1200, 400)
-#a_nm = 100
-#k = 2 * np.pi / lam_space * a_nm
-#a = 1
-#eps_p = 2.5
-#eps_m = 1.0
-#
-#alpa_mie = polarizability(k, a, eps_p, eps_m) / (4*np.pi)
-#alpa_dipole = polarizability_dipole(a, eps_p, eps_m) / (4*np.pi)
-#alpa_dipole_rad_corr = polarizability_dipole_rad_corr(k, a, eps_p, eps_m) / (4*np.pi)
-#
-#plt.title('$R_{p} = $%.1f nm, $\epsilon_p = $%.2f, $\epsilon_m = $%.2f, ' % (a_nm, eps_p, eps_m))
-#plt.plot(lam_space, alpa_mie.real, 'k', label='mie RE')
-#plt.plot(lam_space, alpa_mie.imag, 'k--', label='mie IM')
-#plt.plot(lam_space, alpa_dipole_rad_corr.real, 'r', label='dipole rad corr RE')
-#plt.plot(lam_space, alpa_dipole_rad_corr.imag, 'r--',label='dipole rad corr IM')
-#plt.plot(lam_space, alpa_dipole.real * k/k, 'b',label='dipole RE')
-#plt.plot(lam_space, alpa_dipole.imag * k/k, 'b--', label='dipole IM')
-#plt.xlabel(r'$\lambda$, nm')
-#plt.ylabel(r'$\alpha / a^3$ (sgs units)')
-#plt.legend()
-##plt.grid()
-#plt.show()
+# import matplotlib.pyplot as plt
+# plt.style.use('ggplot')
+# lam_space = np.linspace(200, 1200, 400)
+# a_nm = 120
+# k = 2 * np.pi / lam_space * a_nm
+# a = 1
+# eps_p = 2.5
+# eps_m = 1.77
+
+# alpa_mie = polarizability(k, a, eps_p, eps_m) / (4*np.pi)
+# alpa_dipole = polarizability_dipole(a, eps_p, eps_m) / (4*np.pi)
+# alpa_dipole_rad_corr = polarizability_dipole_rad_corr(k, a, eps_p, eps_m) / (4*np.pi)
+
+# plt.figure(figsize=(10,3))
+# plt.title('$R_{p} = $%.1f nm, $\epsilon_p = $%.2f, $\epsilon_m = $%.2f, ' % (a_nm, eps_p, eps_m))
+# plt.plot(lam_space, alpa_mie.real, 'k', label='mie RE')
+# plt.plot(lam_space, alpa_mie.imag, 'k--', label='mie IM')
+# plt.plot(lam_space, alpa_dipole_rad_corr.real, 'r', label='dipole rad corr RE')
+# plt.plot(lam_space, alpa_dipole_rad_corr.imag, 'r--',label='dipole rad corr IM')
+# plt.plot(lam_space, alpa_dipole.real * k/k, 'b',label='dipole RE')
+# plt.plot(lam_space, alpa_dipole.imag * k/k, 'b--', label='dipole IM')
+# plt.xlabel(r'$\lambda$, nm')
+# plt.ylabel(r'$\alpha / a^3$ (sgs units)')
+# plt.legend()
+# #plt.grid()
+# plt.show()
 
