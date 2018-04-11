@@ -7,7 +7,7 @@ Created on Wed Feb 21 15:53:15 2018
 """
 
 import numpy as np
-import const
+import lib.const as const
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib
@@ -113,11 +113,19 @@ PHI, Z = np.meshgrid(PHI, Z)
 PHImm, Zmm, U_data_mm = PHI, Z, U_data
 
 
+U_data_mm -= np.max(U_data_mm)
+U_data_sm -= np.max(U_data_sm)
+
+
 # %%
 # PLOTTING DATA
 
-levelNum = 40
+matplotlib.rcParams.update({'font.size': 14})
 
+levelNum = 90
+contourNum = 10
+colormap = 'viridis' 
+#colormap = 'jet' 
 
 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(12, 9))
 #fig.tight_layout()
@@ -125,48 +133,48 @@ fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(12, 9))
 ax = axes.flat[0]
 
 im = ax.contourf(Zsm/(2*np.pi), [val*radians for val in (PHIsm - np.pi)], U_data_sm, levelNum,
-             yunits=radians, cmap='jet', alpha=.7)
+             yunits=radians, cmap=colormap, alpha=1.0)
 im.set_clim(np.min([U_data_mm, U_data_sm]), np.max([U_data_mm, U_data_sm]))
 #CB = plt.colorbar() 
 #CB.ax.set_ylabel(r'Trapping potential, $U/kT$')
 
 ax.set_ylabel('Twisting angle, $\phi$, rad')
-CS = ax.contour(Zsm/(2*np.pi),[val*radians for val in (PHIsm - np.pi)], U_data_sm, levelNum,
+CS = ax.contour(Zsm/(2*np.pi),[val*radians for val in (PHIsm - np.pi)], U_data_sm, contourNum,
                  colors='k', linewidths=.4,
                  yunits=radians)
-levels = np.linspace(np.min(U_data_sm), np.max(U_data_sm), levelNum)
-ax.clabel(CS, 
-           #levels[1::4],  # label every n-th level
-           inline=1,
-           fmt='%.0f',
-           fontsize=7)
+levels = np.linspace(np.min(U_data_sm), np.max(U_data_sm), contourNum)
+#ax.clabel(CS, 
+#          #levels[1::4],  # label every n-th level
+#          inline=1,
+#          fmt='%.0f',
+#          fontsize=10)
 
 # ## 2nd plot
 ax = axes.flat[1]
 
 im = ax.contourf(Zmm/(2*np.pi), [val*radians for val in (PHImm - np.pi)], U_data_mm, levelNum,
-             yunits=radians, cmap='jet', alpha=.7)
+             yunits=radians, cmap=colormap, alpha=1.0)
 im.set_clim(np.min([U_data_mm, U_data_sm]), np.max([U_data_mm, U_data_sm]))
 #CB = plt.colorbar() 
 #CB.ax.set_ylabel(r'Trapping potential, $U/kT$')
 
 ax.set_xlabel('Distance to the first particle, $\Delta z / \lambda$')
 ax.set_ylabel('Twisting angle, $\phi$, rad')
-CS = plt.contour(Zmm/(2*np.pi),[val*radians for val in (PHImm - np.pi)], U_data_mm, levelNum,
+CS = plt.contour(Zmm/(2*np.pi),[val*radians for val in (PHImm - np.pi)], U_data_mm, contourNum,
                  colors='k', linewidths=.4,
                  yunits=radians)
-levels = np.linspace(np.min(U_data_mm), np.max(U_data_mm), levelNum)
-ax.clabel(CS, 
-           #levels[1::4],  # label every n-th level
-           inline=1,
-           fmt='%.0f',
-           fontsize=7)
+levels = np.linspace(np.min(U_data_mm), np.max(U_data_mm), contourNum)
+#ax.clabel(CS, 
+#           #levels[1::4],  # label every n-th level
+#           inline=1,
+#           fmt='%.0f',
+#           fontsize=10)
 
 fig.subplots_adjust(right=0.82)
 cbar_ax = fig.add_axes([0.85, 0.11, 0.015, 0.77])
 CB = fig.colorbar(im, cax=cbar_ax)
-CB.set_label('Trapping potential, $U_{tr}/kT$')
+CB.set_label('Potential, $U/kT$')
 #CB = plt.colorbar(CS, shrink=0.8, extend='both')
 #plt.clabel(CS, inline=1, fontsize=10)
-plt.savefig('results/well_contour_two.pdf')
-#plt.show()
+#plt.savefig('results/well_contour_two.png')
+plt.show()
