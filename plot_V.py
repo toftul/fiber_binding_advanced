@@ -20,18 +20,12 @@ Vcr3 = 3.6
 for Rf in Rf_space:
     V = 2*np.pi/wl_space * Rf * np.sqrt(eps_in - eps_out)
     plt.plot(wl_space * 1e9, V, label="Rf = %.0f nm"% (Rf*1e9))
-
-wl = 530
-ylim = 10
-wlll = np.array([wl, wl])
-hight = np.array([0, ylim])
-plt.plot(wlll, hight, 'k--', color='gray')
-
+    
 plt.plot(wl_space * 1e9, Vcr * np.ones(len(wl_space)), 'k--')
 plt.plot(wl_space * 1e9, Vcr2 * np.ones(len(wl_space)), 'k--', color='gray')
 plt.plot(wl_space * 1e9, Vcr3 * np.ones(len(wl_space)), 'k--', color='gray')
 plt.legend()
-plt.ylim(ymax=ylim)
+plt.ylim(ymax=5)
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.title(r'$\varepsilon_f$ = %.2f, $\varepsilon_m$ = %.2f' % (eps_in, eps_out), loc='right')
 plt.xlabel(r'$\lambda$, nm')

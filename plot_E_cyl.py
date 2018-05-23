@@ -21,25 +21,21 @@ def pol2cart(rho, phi):
     return(x, y)
 
 lamm = 530.0
-
-Rff_sm = 130  # 130 or 495
-Rff_mm = 450  # 130 or 495
-
+Rff = 500
 R_particle = 120
 
 eps_in = 3.5  # 2.09
 eps_out = 1.77
 
 k = 1.0
-R_sm = Rff_sm/lamm * 2*np.pi
-R_mm = Rff_mm/lamm * 2*np.pi
+R = Rff/lamm * 2*np.pi
 m = np.sqrt(eps_in / eps_out)
 E0 = 1.0
 nmin = -15
 nmax = 15
 case = 2
 
-def E(x, y, R):
+def E(x, y):
     if case == 1:
         E0x = 0j
         E0y = 0j
@@ -72,10 +68,20 @@ EEE = E(x_sm, y_sm, R_sm)
 z0 = EEE[0]                                
 z1 = EEE[1]
 z2 = EEE[2]   
+zmod = np.sqrt(EEE[0] * EEE[0] + EEE[1] * EEE[1] + EEE[2] * EEE[2])
+                             
 
-zmod_sm = EEE[0].conjugate() * EEE[0] + \
-          EEE[1].conjugate() * EEE[1] + \
-          EEE[2].conjugate() * EEE[2]
+#plt.contourf(x, y, z0, NDOTS)                             
+#plt.colorbar() 
+#plt.show()
+#
+#plt.contourf(x, y, z1, NDOTS)                             
+#plt.colorbar() 
+#plt.show()
+#
+#plt.contourf(x, y, z2, NDOTS)                             
+#plt.colorbar() 
+#plt.show()
 
 
 
