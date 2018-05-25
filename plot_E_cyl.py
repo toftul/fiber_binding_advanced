@@ -8,7 +8,7 @@ Created on Tue Jan 16 13:20:19 2018
 
 import numpy as np
 import matplotlib.pyplot as plt
-import Mie_scat_cyl
+import lib.MieScatCyl as Mie_scat_cyl
 
 def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
@@ -35,7 +35,7 @@ nmin = -15
 nmax = 15
 case = 2
 
-def E(x, y):
+def E(x, y, R):
     if case == 1:
         E0x = 0j
         E0y = 0j
@@ -102,9 +102,13 @@ zmod_mm = EEE[0].conjugate() * EEE[0] + \
 #               EEE[2].real * EEE[2].real)**2
                
 
+# %%
+# Single map
+
+
 
 # %% 
-# plotting part
+# Two maps
 
 NDOTS = 40
 

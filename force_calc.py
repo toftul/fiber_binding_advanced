@@ -1,11 +1,13 @@
 import numpy as np
-import const
+import lib.const as const
 #import GF_fiber_cython as gff
-import GF_fiber as gff
-import GF_vacuum as gfv
-import Mie_scat_cyl
-import Mie_polarizability as mie_alpha
+import lib.GFfiber as gff
+import lib.GFvacuum as gfv
+import lib.MieScatCyl as Mie_scat_cyl
+import lib.MiePolarizability as mie_alpha
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
+from basic_units import radians
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from joblib import Parallel, delayed
@@ -65,8 +67,8 @@ def E0_sum(r, k, fiber_radius, eps_out, eps_in, E0_mod, nmin_sc, nmax_sc, case):
     r_car = pol2cart(r)
     # Incidence is the following:
     #
-    #
-    #      /-\     k
+    #       _
+    #      / \     k
     #      \_/   <----
     #   -------------------------> x
     #
@@ -125,10 +127,10 @@ def dipole_moment(i, r1, r2, R_particle, eps_particle,
 
     k2_eps0 = k**2 / const.epsilon0
     Gsjj = gff.GF_pol(k, eps_out, eps_in, fiber_radius,
-                  rj, rj, nmin, nmax, kzimax)
+                      rj, rj, nmin, nmax, kzimax)
     Gsii = gff.GF_pol(k, eps_out, eps_in, fiber_radius,
                   ri, ri, nmin, nmax, kzimax)
-    G0ij = gfv.GF_vac_pol(ri, rj, k)
+    G0ij = gfv.GF_vac_pol(ri, rj, k, eps_out)
     G0ji = G0ij.transpose()
 
     Gsij = gff.GF_pol(k, eps_out, eps_in, fiber_radius, ri, rj, nmin, nmax, kzimax)
@@ -209,7 +211,7 @@ def total_loc_efield(i, r1, r2, k, case, nmin, nmax, kzimax,
 
     Gsii = gff.GF_pol(k, eps_out, eps_in, fiber_radius,
                       ri, ri, nmin, nmax, kzimax)
-    G0ij = gfv.GF_vac_pol(ri, rj, k)
+    G0ij = gfv.GF_vac_pol(ri, rj, k, eps_out)
 
     Gsij = gff.GF_pol(k, eps_out, eps_in, fiber_radius,
                       ri, rj, nmin, nmax, kzimax)
@@ -329,6 +331,10 @@ def force_12(alpha, r1, r2, R_particle, eps_particle, k, eps_out, eps_in,
         return(0)
 
 
+def qPhiStable(z_eq):
+    q = False
+    return(q)
+
 # single mode criteria
 def VVV_q(wl, rho_c, epsilon_fiber, epsilon_m):
     V = 2*np.pi/wl * rho_c * np.sqrt(epsilon_fiber - epsilon_m)
@@ -348,23 +354,36 @@ def VVV_q(wl, rho_c, epsilon_fiber, epsilon_m):
 
 # sm -- single mode regime
 # mm -- multy mode regime
-regime = 'mm'
-
-k = 1.0
-lam = 2 * np.pi / k
-lammmm = 530.0  # [nm] 
-R_particle = 120.0 / lammmm * 2 * np.pi / k
-fiber_radius = 130.0 / lammmm * 2 * np.pi / k
+regime = 'sm'
 
 eps_particle = 2.5
 eps_out = 1.77
 eps_in = 3.5  # 2.09
 
-V = k * fiber_radius * np.sqrt(eps_in - eps_out)
-print('V = ', V)
+k = 1.0
+lam = 2 * np.pi / k
+lammmm_m = 530.0  # [nm] wavelength in media
+lammmm = lammmm_m * np.sqrt(eps_out) # wavelength in vacuume 
+
+R_particle = 120.0 / lammmm * 2 * np.pi / k
 
 nmin = 0
-nmax = 1
+nmax = 2
+if regime == 'sm':
+   #fiber_radius = 80.0 / lammmm * 2*np.pi / k
+   fiber_radius = 130.0 / lammmm * 2*np.pi / k
+elif regime == 'mm':
+   nmin = 0
+   nmax = 15
+   fiber_radius = 495.0 / lammmm * 2*np.pi / k
+else:
+   fiber_radius = R_particle
+   print('Check \'regime\' variable!')
+
+
+#V = k * fiber_radius * np.sqrt(eps_in - eps_out)
+#print('V = ', V)
+
 kzimax = 5*k
 
 P_laser = 100e-3  # [W]
@@ -377,124 +396,188 @@ E0_mod = 1.0
 nmin_sc = -60
 nmax_sc = 60
 # TM = 1, TE = 2
-case = 2
+case = 2 
 # r = (rho, theta, z)
 r1 = np.array([(fiber_radius + R_particle), np.pi, 0])
-r2 = np.array([(fiber_radius + R_particle), np.pi, 2.7 * lam])
+r2 = np.array([(fiber_radius + R_particle), np.pi, 3.95 * lam])
 
 if regime == 'sm':
-   z_eq_space = np.array([3.95, 7.0, 9.15]) * lam
+   z_eq_space = np.array([3.95, 6.85, 9.0]) * lam
    z_eq_color_space = ['g', 'r', 'k']
 elif regime == 'mm':
-   z_eq_space = np.array([3.95, 7.0, 9.15]) * lam
+   z_eq_space = np.array([3.95, 6.85, 9.5]) * lam
    z_eq_color_space = ['g', 'r', 'k']
 else:
    z_eq_space = np.array([3.95]) * lam
    z_eq_color_space = ['g']
 
 # Creating grid for calculations
-z_space = np.linspace(2 * R_particle, 12 * lam, 150)
+z_space = np.linspace(2 * R_particle, 12 * lam, 250)
 phi_space = np.linspace(-np.pi/2, np.pi/2, 60) + np.pi
+rho_space = np.linspace(fiber_radius + R_particle, 
+                        fiber_radius + R_particle + 5*R_particle, 40)
 
 r2_space = np.zeros([len(z_space), 3])
-r2_space_phi = np.zeros([len(phi_space), 3])
 for i, zz in enumerate(z_space):
-    r2_space[i] = np.array([r2[0], 0, zz])
+    r2_space[i] = np.array([r2[0], r2[1], zz])
 
-for i, iphi in enumerate(phi_space):
-    r2_space_phi[i] = np.array([r2[0], iphi, r2[2]])
+r2_space_phi = np.zeros([len(z_eq_space), len(phi_space), 3])
+for j, z_eq in enumerate(z_eq_space):
+   for i, iphi in enumerate(phi_space):
+       r2_space_phi[j, i] = np.array([r2[0], iphi, z_eq])
     
-    
+
+Frho = np.zeros(len(rho_space))  
+Fphi = np.zeros([len(z_eq_space), len(phi_space)])
 Fz = np.zeros(len(z_space))
-Fphi = np.zeros(len(phi_space))
 
 
-###########################################
+# %%
 ### Fz calculation
+start_time = time.time()
+Fz = Parallel(n_jobs=4)(delayed(force_12)(2, r1, r2_space[i], R_particle, eps_particle, k, 
+                                          eps_out, eps_in, fiber_radius, nmin, nmax, kzimax, 
+                                          E0_mod, nmin_sc, nmax_sc, case) for i in range(len(z_space)))
+Fz = np.asarray(Fz)
+Fz = -Fz
+# F to real units [N]
+Fz = Fz * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
+ex_time = time.time() - start_time
+print('Exucution time: %.1f s' % ex_time)
+
+if regime == 'mm':
+    np.save('npy_data/fzmm.npy', Fz)
+elif regime == 'sm':
+    np.save('npy_data/fzsm.npy', Fz)
+
+
+# %%
+### Fphi calculation
+start_time = time.time()
+for j in np.arange(len(z_eq_space)):
+   Fphi_tmp = Parallel(n_jobs=4)(delayed(force_12)(1, r1, r2_space_phi[j, i], R_particle, eps_particle, k, 
+                                                   eps_out, eps_in, fiber_radius, nmin, nmax, kzimax, 
+                                                   E0_mod, nmin_sc, nmax_sc, case) for i in range(len(phi_space)))
+   Fphi_tmp = np.asarray(Fphi_tmp)
+   Fphi_tmp = - Fphi_tmp
+   # F to real units [N]
+   Fphi[j] = Fphi_tmp * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
+   
+ex_time = time.time() - start_time
+print('Exucution time: %.1f s' % ex_time)
+
+if regime == 'mm':
+    np.save('npy_data/fphimm.npy', Fphi)
+elif regime == 'sm':
+    np.save('npy_data/fphism.npy', Fphi)
+
+
+# %%
+### Fr calculation
 #start_time = time.time()
-#Fz = Parallel(n_jobs=4)(delayed(force_12)(2, r1, r2_space[i], R_particle, eps_particle, k, 
+#Frho = Parallel(n_jobs=4)(delayed(force_12)(0, r1, r2_space[i], R_particle, eps_particle, k, 
 #                                          eps_out, eps_in, fiber_radius, nmin, nmax, kzimax, 
-#                                          E0_mod, nmin_sc, nmax_sc, case) for i in range(len(z_space)))
-#Fz = np.asarray(Fz)
+#                                          E0_mod, nmin_sc, nmax_sc, case) for i in range(len(rho_space)))
+#Frho = np.asarray(Frho)
+#Frho = -Frho
 ## F to real units [N]
-#Fz = Fz * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
+#Frho = Frho * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
 #ex_time = time.time() - start_time
-#print('Exucution time: %.1f' % ex_time)
+#print('Exucution time: %.1f s' % ex_time)
 
 
-###########################################
-# Fphi calculation
-#start_time = time.time()
-#Fphi = Parallel(n_jobs=4)(delayed(force_12)(1, r1, r2_space_phi[i], R_particle, eps_particle, k, 
-#                                          eps_out, eps_in, fiber_radius, nmin, nmax, kzimax, 
-#                                          E0_mod, nmin_sc, nmax_sc, case) for i in range(len(phi_space)))
-#Fphi = np.asarray(Fphi)
-## F to real units [N]
-#Fphi = Fphi * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
-#ex_time = time.time() - start_time
-#print('Exucution time: %.1f' % ex_time)
+# %%
+# Plot results
+
+if regime == 'mm':
+    Fz = np.load('npy_data/fzmm.npy')
+    Fphi = np.load('npy_data/fphimm.npy')
+elif regime == 'sm':
+    Fz = np.load('npy_data/fzsm.npy')
+    Fphi = np.load('npy_data/fphism.npy')
 
 
-###################################
-# Calculation for plotting the potential well
-z_eq = 3.44 * 2*np.pi
-phi_eq = 0.0
+fig = plt.figure(figsize=(10, 4))
+gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1.8]) 
+Fz_plt = fig.add_subplot(gs[0])
+Fphi_plt = fig.add_subplot(gs[1])
 
-plt.savefig("Fz_Fphi_mm_lam530_a120(na stile).pdf", bbox_inches='tight')
+# Fz plot
+Fz_plt.plot(z_space/(2*np.pi), Fz*1e12, label='$F_z(\phi = 0, \Delta z)$', color='steelblue', zorder=2)
+# plot circles
+for i, clr in enumerate(z_eq_color_space):
+   #plt.plot(z_eq_space[i]/lam, 0.0, clr+'o', ms=8, alpha=.7)
+   Fz_plt.scatter(z_eq_space[i]/lam, 0.0, s=80, facecolors=clr, edgecolors='black', alpha=.7, zorder=3)
+Fz_plt.legend()
+Fz_plt.set_xlabel(r'Distance to the first particle, $\Delta z/\lambda$')
+Fz_plt.set_ylabel(r'Optical force, $F_z$, pN')
+#Fz_plt.grid(zorder=1)
+
+# Fphi plot
+for i in np.arange(len(z_eq_space)):
+   Fphi_plt.plot([val*radians for val in (phi_space - np.pi)], Fphi[i]*1e12, z_eq_color_space[i], label='$F_{\phi}(\phi, \Delta z = %.2f \lambda)$' % (z_eq_space[i]/lam), xunits=radians)
+Fphi_plt.set_xlabel(r'Relative twisting, $\phi$, rad')
+Fphi_plt.set_ylabel(r'Optical force, $F_{\phi}$, pN')
+Fphi_plt.legend()
+#Fphi_plt.grid(zorder=1)
+
+if regime == 'mm':
+    plt.savefig("results/Fz_Fphi_mm_lam530_a120.pdf", bbox_inches='tight')
+elif regime == 'sm':
+    plt.savefig("results/Fz_Fphi_sm_lam530_a120.pdf", bbox_inches='tight')
+
+plt.show()
+
+
+# %%
+### Plot Frho
+#plt.figure(figsize=(8,3))
+#plt.rcParams.update({'font.size': 16})
+#plt.plot((rho_space - R_particle - fiber_radius)/R_particle, Frho * 1e12, 'k-', label='SM')
+#plt.plot((rho_space - R_particle - fiber_radius)/R_particle, Frho2 * 1e12, 'k--', label='MM')
+#plt.xlabel('$D/R_p$')
+#plt.ylabel('$F^{el}_r$, pN')
+##plt.grid()
+#plt.legend()
 #plt.show()
 
-Fz = np.zeros([len(z_space), len(phi_space)])
-Fphi = np.zeros([len(z_space), len(phi_space)])
+# %%
 
-start_time = time.time()
-for i, z_i in enumerate(z_space):
-    print('z step = ', i)
-    for j, phi_j in enumerate(phi_space):
-        r2 = np.array([fiber_radius + R_particle, phi_j, z_i])
-        
-        Fphi[i, j] = - force_12(1, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
-                             fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
-        Fz[i, j] = - force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
-                           fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+# Calculating data for plotting the potential well
 
-## F to real units [N]
-Fphi = Fphi * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
-Fz = Fz * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
-
-
-ex_time = time.time() - start_time
-print('Exucution time: %.1f min' % (ex_time/60.0))
-np.save('npy_data/F_well_data_sm', (z_space, phi_space, Fz, Fphi))
-
-#for i, zz in enumerate(z_space):
-#    print('step = ', i)
-#    r2 = np.array([fiber_radius + R_particle, 0, zz])
-#    Fz[i] = force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
-#              fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
-    
-#####
-#np.save('npy_data/Fz', (z_space, Fz))
-#np.save('npy_data/Fphi', (phi_space, Fphi))
-#Fz_air_TM_mm = Fz
-#np.save('npy_data/Fz_air_TM_mm330', (z_space, Fz_air_TM_mm))
-#Fz_air_TE_mm = Fz
-#np.save('npy_data/Fz_air_TE_mm330', (z_space, Fz_air_TE_mm))
-#Fz_air_TM_sm = Fz
-#np.save('npy_data/Fz_air_TM_sm330', (z_space, Fz_air_TM_sm))
-#Fz_air_TE_sm = Fz
-#np.save('npy_data/Fz_air_TE_sm330', (z_space, Fz_air_TE_sm))
+#z_eq = 3.44 * 2*np.pi
+#phi_eq = 0.0
+#
+#z_space = np.linspace(1.5*2*np.pi, 6.0*2*np.pi, 60)
+#phi_space = np.linspace(-np.pi/3, np.pi/3, 25) + np.pi
+#
+#Fz = np.zeros([len(z_space), len(phi_space)])
+#Fphi = np.zeros([len(z_space), len(phi_space)])
+#
+#start_time = time.time()
+#for i, z_i in enumerate(z_space):
+#    print('z step = ', i)
+#    for j, phi_j in enumerate(phi_space):
+#        r2 = np.array([fiber_radius + R_particle, phi_j, z_i])
+#        
+#        Fphi[i, j] = - force_12(1, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
+#                             fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+#        Fz[i, j] = - force_12(2, r1, r2, R_particle, eps_particle, k, eps_out, eps_in, 
+#                           fiber_radius, nmin, nmax, kzimax, E0_mod, nmin_sc, nmax_sc, case)
+#
+### F to real units [N]
+#Fphi = Fphi * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
+#Fz = Fz * E0_mod_real**2 * const.epsilon00 * 2 * np.pi * lammmm*1e-9
+#
+#ex_time = time.time() - start_time
+#print('Exucution time: %.1f h' % (ex_time/60.0/60.0))
+#
+## saving results
+#np.save('npy_data/F_well_data_mm', (z_space, phi_space, Fz, Fphi))
 
 
-#Fz_TE = Fz
-#Fz_TM = Fz
-#Fz_TM_mm = Fz
-#Fz_TE_mm = Fz
-#np.save('npy_data/Fz_TE_sm', (z_space, Fz_TE))
-#np.save('npy_data/Fz_TM_sm', (z_space, Fz_TM))
-#np.save('npy_data/Fz_TE_mm', (z_space, Fz_TE_mm))
-#np.save('npy_data/Fz_TM_mm', (z_space, Fz_TM_mm))
-
-#####
+# %%
+# PLOTTING
 
 #z_space, Fz_TE = np.load('npy_data/Fz_TE_sm.npy')
 #z_space, Fz_TM = np.load('npy_data/Fz_TM_sm.npy')
